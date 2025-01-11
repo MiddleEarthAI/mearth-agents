@@ -7,6 +7,6 @@ dist
 node_modules
 dist/
 /cache
-Dockerfile
+# Dockerfile
 db.sqlite
 .idea
