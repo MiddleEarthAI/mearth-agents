@@ -2,8 +2,8 @@
 dist
 !index.ts
 !character.ts
-.env
-.env.*
+# .env
+# .env.*
 node_modules
 dist/
 /cache
