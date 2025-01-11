@@ -128,6 +128,7 @@ const checkPortAvailable = (port: number): Promise<boolean> => {
 };
 
 const startAgents = async () => {
+  try{
   const directClient = new DirectClient();
   let serverPort = parseInt(settings.SERVER_PORT || "3000");
   const args = parseArguments();
@@ -168,6 +169,9 @@ const startAgents = async () => {
   elizaLogger.log("Chat started. Type 'exit' to quit.");
   const chat = startChat(characters);
   chat();
+  }catch(err) {
+    console.log("handled error: ", err);
+  }
 };
 
 startAgents().catch((error) => {
