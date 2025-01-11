@@ -6,4 +6,4 @@ buildCommand = "pnpm install && pnpm build"
 startCommand = "pnpm start"
 healthcheckPath = "/"
 healthcheckTimeout = 100
-restartPolicyType = "on-failure" 
+# restartPolicyType = "on-failure" 
