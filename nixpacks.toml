@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ['nodejs', 'python3', 'gcc', 'git']
+
+[phases.install]
+cmds = ['npm install -g pnpm@latest', 'pnpm install --frozen-lockfile']
+
+[phases.build]
+cmds = ['pnpm build']
+
+[start]
+cmd = 'pnpm start' 

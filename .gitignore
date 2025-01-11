@@ -1,0 +1,12 @@
+*.ts
+dist
+!index.ts
+!character.ts
+.env
+.env.*
+node_modules
+dist/
+/cache
+Dockerfile
+db.sqlite
+.idea
