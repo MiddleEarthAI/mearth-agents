@@ -45,7 +45,7 @@ export function createAgent(
   elizaLogger.success(
     elizaLogger.successesTitle,
     "Creating runtime for character",
-    character.name,
+    character.name
   );
 
   nodePlugin ??= createNodePlugin();
@@ -101,7 +101,7 @@ async function startAgent(character: Character, directClient: DirectClient) {
   } catch (error) {
     elizaLogger.error(
       `Error starting agent for character ${character.name}:`,
-      error,
+      error
     );
     console.error(error);
     throw error;
@@ -128,48 +128,50 @@ const checkPortAvailable = (port: number): Promise<boolean> => {
 };
 
 const startAgents = async () => {
-  try{
-  const directClient = new DirectClient();
-  let serverPort = parseInt(settings.SERVER_PORT || "3000");
-  const args = parseArguments();
-
-  let charactersArg = args.characters || args.character;
-  let characters = [character];
-
-  console.log("charactersArg", charactersArg);
-  if (charactersArg) {
-    characters = await loadCharacters(charactersArg);
-  }
-  console.log("characters", characters);
   try {
-    for (const character of characters) {
-      await startAgent(character, directClient as DirectClient);
+    const directClient = new DirectClient();
+    let serverPort = parseInt(settings.SERVER_PORT || "3000");
+    const args = parseArguments();
+
+    let charactersArg = args.characters || args.character;
+    let characters = [character];
+
+    console.log("charactersArg", charactersArg);
+    if (charactersArg) {
+      characters = await loadCharacters(charactersArg);
     }
-  } catch (error) {
-    elizaLogger.error("Error starting agents:", error);
-  }
+    console.log("characters", characters);
+    try {
+      for (const character of characters) {
+        await startAgent(character, directClient as DirectClient);
+      }
+    } catch (error) {
+      elizaLogger.error("Error starting agents:", error);
+    }
 
-  while (!(await checkPortAvailable(serverPort))) {
-    elizaLogger.warn(`Port ${serverPort} is in use, trying ${serverPort + 1}`);
-    serverPort++;
-  }
+    while (!(await checkPortAvailable(serverPort))) {
+      elizaLogger.warn(
+        `Port ${serverPort} is in use, trying ${serverPort + 1}`
+      );
+      serverPort++;
+    }
 
-  // upload some agent functionality into directClient
-  directClient.startAgent = async (character: Character) => {
-    // wrap it so we don't have to inject directClient later
-    return startAgent(character, directClient);
-  };
+    // upload some agent functionality into directClient
+    directClient.startAgent = async (character: Character) => {
+      // wrap it so we don't have to inject directClient later
+      return startAgent(character, directClient);
+    };
 
-  directClient.start(serverPort);
+    directClient.start(serverPort);
 
-  if (serverPort !== parseInt(settings.SERVER_PORT || "3000")) {
-    elizaLogger.log(`Server started on alternate port ${serverPort}`);
-  }
+    if (serverPort !== parseInt(settings.SERVER_PORT || "3000")) {
+      elizaLogger.log(`Server started on alternate port ${serverPort}`);
+    }
 
-  elizaLogger.log("Chat started. Type 'exit' to quit.");
-  const chat = startChat(characters);
-  chat();
-  }catch(err) {
+    elizaLogger.log("Chat started. Type 'exit' to quit.");
+    const chat = startChat(characters);
+    chat();
+  } catch (err) {
     console.log("handled error: ", err);
   }
 };
