@@ -9,7 +9,7 @@ import {
 } from "@elizaos/core";
 import { bootstrapPlugin } from "@elizaos/plugin-bootstrap";
 import { createNodePlugin } from "@elizaos/plugin-node";
-import { solanaPlugin } from "@elizaos/plugin-solana";
+// import { solanaPlugin } from "@elizaos/plugin-solana";
 import fs from "fs";
 import net from "net";
 import path from "path";
@@ -18,6 +18,7 @@ import { initializeDbCache } from "./cache/index.ts";
 import { character } from "./character.ts";
 import { startChat } from "./chat/index.ts";
 import { initializeClients } from "./clients/index.ts";
+
 import {
   getTokenForProvider,
   loadCharacters,
@@ -25,9 +26,11 @@ import {
 } from "./config/index.ts";
 import { initializeDatabase } from "./database/index.ts";
 
+// Get the current file's directory path
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Helper function to wait for a random duration between min and max milliseconds
 export const wait = (minTime: number = 1000, maxTime: number = 3000) => {
   const waitTime =
     Math.floor(Math.random() * (maxTime - minTime + 1)) + minTime;
@@ -36,6 +39,7 @@ export const wait = (minTime: number = 1000, maxTime: number = 3000) => {
 
 let nodePlugin: any | undefined;
 
+// Creates a new agent runtime with the provided character, database, cache and token
 export function createAgent(
   character: Character,
   db: any,
@@ -59,7 +63,7 @@ export function createAgent(
     plugins: [
       bootstrapPlugin,
       nodePlugin,
-      character.settings?.secrets?.WALLET_PUBLIC_KEY ? solanaPlugin : null,
+      // character.settings?.secrets?.WALLET_PUBLIC_KEY ? solanaPlugin : null,
     ].filter(Boolean),
     providers: [],
     actions: [],
@@ -69,14 +73,17 @@ export function createAgent(
   });
 }
 
+// Initializes and starts an agent for a given character
 async function startAgent(character: Character, directClient: DirectClient) {
   try {
+    // Set default ID and username if not provided
     character.id ??= stringToUuid(character.name);
     character.username ??= character.name;
 
     const token = getTokenForProvider(ModelProviderName.ANTHROPIC, character);
     const dataDir = path.join(__dirname, "../data");
 
+    // Create data directory if it doesn't exist
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
@@ -94,7 +101,6 @@ async function startAgent(character: Character, directClient: DirectClient) {
 
     directClient.registerAgent(runtime);
 
-    // report to console
     elizaLogger.debug(`Started ${character.name} as ${runtime.agentId}`);
 
     return runtime;
@@ -108,6 +114,7 @@ async function startAgent(character: Character, directClient: DirectClient) {
   }
 }
 
+// Checks if a port is available for use
 const checkPortAvailable = (port: number): Promise<boolean> => {
   return new Promise((resolve) => {
     const server = net.createServer();
@@ -127,55 +134,53 @@ const checkPortAvailable = (port: number): Promise<boolean> => {
   });
 };
 
+// Main function to start all agents
 const startAgents = async () => {
-  try {
-    const directClient = new DirectClient();
-    let serverPort = parseInt(settings.SERVER_PORT || "3000");
-    const args = parseArguments();
+  const directClient = new DirectClient();
+  let serverPort = parseInt(settings.SERVER_PORT || "3000");
+  const args = parseArguments();
 
-    let charactersArg = args.characters || args.character;
-    let characters = [character];
+  // Load characters from arguments or use default
+  let charactersArg = args.characters || args.character;
+  let characters = [character];
 
-    console.log("charactersArg", charactersArg);
-    if (charactersArg) {
-      characters = await loadCharacters(charactersArg);
-    }
-    console.log("characters", characters);
-    try {
-      for (const character of characters) {
-        await startAgent(character, directClient as DirectClient);
-      }
-    } catch (error) {
-      elizaLogger.error("Error starting agents:", error);
-    }
-
-    while (!(await checkPortAvailable(serverPort))) {
-      elizaLogger.warn(
-        `Port ${serverPort} is in use, trying ${serverPort + 1}`
-      );
-      serverPort++;
-    }
-
-    // upload some agent functionality into directClient
-    directClient.startAgent = async (character: Character) => {
-      // wrap it so we don't have to inject directClient later
-      return startAgent(character, directClient);
-    };
-
-    directClient.start(serverPort);
-
-    if (serverPort !== parseInt(settings.SERVER_PORT || "3000")) {
-      elizaLogger.log(`Server started on alternate port ${serverPort}`);
-    }
-
-    elizaLogger.log("Chat started. Type 'exit' to quit.");
-    const chat = startChat(characters);
-    chat();
-  } catch (err) {
-    console.log("handled error: ", err);
+  console.log("charactersArg", charactersArg);
+  if (charactersArg) {
+    characters = await loadCharacters(charactersArg);
   }
+  console.log("characters", characters);
+  try {
+    // Start each character's agent
+    for (const character of characters) {
+      await startAgent(character, directClient as DirectClient);
+    }
+  } catch (error) {
+    elizaLogger.error("Error starting agents:", error);
+  }
+
+  // Find available port if default is in use
+  while (!(await checkPortAvailable(serverPort))) {
+    elizaLogger.warn(`Port ${serverPort} is in use, trying ${serverPort + 1}`);
+    serverPort++;
+  }
+
+  // Add startAgent functionality to directClient
+  directClient.startAgent = async (character: Character) => {
+    return startAgent(character, directClient);
+  };
+
+  directClient.start(serverPort);
+
+  if (serverPort !== parseInt(settings.SERVER_PORT || "3000")) {
+    elizaLogger.log(`Server started on alternate port ${serverPort}`);
+  }
+
+  elizaLogger.log("Chat started. Type 'exit' to quit.");
+  const chat = startChat(characters);
+  chat();
 };
 
+// Start the application and handle any unhandled errors
 startAgents().catch((error) => {
   elizaLogger.error("Unhandled error in startAgents:", error);
   process.exit(1);
