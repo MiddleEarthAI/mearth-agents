@@ -136,48 +136,57 @@ const checkPortAvailable = (port: number): Promise<boolean> => {
 
 // Main function to start all agents
 const startAgents = async () => {
-  const directClient = new DirectClient();
-  let serverPort = parseInt(settings.SERVER_PORT || "3000");
-  const args = parseArguments();
-
-  // Load characters from arguments or use default
-  let charactersArg = args.characters || args.character;
-  let characters = [];
-
-  console.log("charactersArg", charactersArg);
-  if (charactersArg) {
-    characters = await loadCharacters(charactersArg);
-  }
-  console.log("characters", characters);
   try {
-    // Start each character's agent
-    for (const character of characters) {
-      await startAgent(character, directClient as DirectClient);
+    const directClient = new DirectClient();
+    let serverPort = parseInt(settings.SERVER_PORT || "3000");
+    const args = parseArguments();
+
+    // Load characters from arguments or use default
+    let charactersArg = args.characters || args.character;
+    let characters = [];
+
+    console.log("charactersArg", charactersArg);
+    if (charactersArg) {
+      characters = await loadCharacters(charactersArg);
     }
+    console.log(
+      "character names",
+      characters.map((c) => c.name)
+    );
+    try {
+      // Start each character's agent
+      for (const character of characters) {
+        await startAgent(character, directClient as DirectClient);
+      }
+    } catch (error) {
+      elizaLogger.error("Error starting agents:", error);
+    }
+
+    // Find available port if default is in use
+    while (!(await checkPortAvailable(serverPort))) {
+      elizaLogger.warn(
+        `Port ${serverPort} is in use, trying ${serverPort + 1}`
+      );
+      serverPort++;
+    }
+
+    // Add startAgent functionality to directClient
+    directClient.startAgent = async (character: Character) => {
+      return startAgent(character, directClient);
+    };
+
+    directClient.start(serverPort);
+
+    if (serverPort !== parseInt(settings.SERVER_PORT || "3000")) {
+      elizaLogger.log(`Server started on alternate port ${serverPort}`);
+    }
+
+    elizaLogger.log("Chat started. Type 'exit' to quit.");
+    const chat = startChat(characters);
+    chat();
   } catch (error) {
     elizaLogger.error("Error starting agents:", error);
   }
-
-  // Find available port if default is in use
-  while (!(await checkPortAvailable(serverPort))) {
-    elizaLogger.warn(`Port ${serverPort} is in use, trying ${serverPort + 1}`);
-    serverPort++;
-  }
-
-  // Add startAgent functionality to directClient
-  directClient.startAgent = async (character: Character) => {
-    return startAgent(character, directClient);
-  };
-
-  directClient.start(serverPort);
-
-  if (serverPort !== parseInt(settings.SERVER_PORT || "3000")) {
-    elizaLogger.log(`Server started on alternate port ${serverPort}`);
-  }
-
-  elizaLogger.log("Chat started. Type 'exit' to quit.");
-  const chat = startChat(characters);
-  chat();
 };
 
 // Start the application and handle any unhandled errors
