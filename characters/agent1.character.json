@@ -6,7 +6,11 @@
   "settings": {
     "secrets": {
       "TELEGRAM_BOT_TOKEN": "7507640046:AAFrzSu6HhsMelXOGotLJpFv16iR1kb8rVw",
-      "ANTHROPIC_API_KEY": "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"
+      "ANTHROPIC_API_KEY": "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",
+      "TWITTER_DRY_RUN": "false",
+      "TWITTER_USERNAME": "testi1151149",
+      "TWITTER_PASSWORD": "6iGxvqee5UHBRyh",
+      "TWITTER_EMAIL": "testing13467@web.de"
     },
     "voice": {
       "model": "en_US-hfc_female-medium"
