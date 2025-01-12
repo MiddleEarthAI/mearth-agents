@@ -15,7 +15,7 @@ import net from "net";
 import path from "path";
 import { fileURLToPath } from "url";
 import { initializeDbCache } from "./cache/index.ts";
-import { character } from "./character.ts";
+// import { character } from "./character.ts";
 import { startChat } from "./chat/index.ts";
 import { initializeClients } from "./clients/index.ts";
 
@@ -142,7 +142,7 @@ const startAgents = async () => {
 
   // Load characters from arguments or use default
   let charactersArg = args.characters || args.character;
-  let characters = [character];
+  let characters = [];
 
   console.log("charactersArg", charactersArg);
   if (charactersArg) {
