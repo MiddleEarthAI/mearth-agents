@@ -2,6 +2,7 @@
 dist
 !index.ts
 !character.ts
+!src/
 # .env
 # .env.*
 node_modules
