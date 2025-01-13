@@ -1,45 +1,53 @@
-import { Provider, TokenState, Transaction } from "./types";
+import { Provider, IAgentRuntime, Memory, State } from "@elizaos/core";
+import { TokenState, Transaction } from "./types";
 
-export class TokenStateProvider implements Provider {
-  name = "token_state_provider";
-  description = "Provides token balance and transaction history";
-  private state: TokenState = {
-    balance: 0,
-    recentTransactions: [],
-    lastUpdate: 0,
-  };
+const tokenStateProvider: Provider = {
+  get: async (
+    runtime: IAgentRuntime,
+    message: Memory,
+    state?: State
+  ): Promise<string> => {
+    try {
+      // const tokenState = state?.tokenState as TokenState;
+      // if (!tokenState) {
+      //     return "No token state available";
+      //   }
+      const tokenState = {
+        balance: Math.random() * 1000,
+        recentTransactions: [],
+        lastUpdate: new Date().toISOString(),
+      };
 
-  async initialize(): Promise<void> {
-    // Initialize token state
-    // TODO: Load initial balance and transaction history
-  }
+      // Get recent transactions
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      const recentTransactions = tokenState.recentTransactions.filter(
+        (tx) => tx.timestamp > oneDayAgo
+      );
 
-  async update(): Promise<void> {
-    // Update token state
-    // TODO: Fetch latest balance and transactions
-  }
+      // Format token state information
+      return `
+Token State Information:
 
-  getState(): Promise<TokenState> {
-    return Promise.resolve(this.state);
-  }
+Current Balance: ${tokenState.balance} tokens
 
-  addTransaction(transaction: Transaction): void {
-    this.state.recentTransactions.push(transaction);
-    this.state.balance += transaction.amount;
+Recent Transactions (24h):
+${recentTransactions
+  .map(
+    (tx) => `
+- Amount: ${tx.amount > 0 ? "+" : ""}${tx.amount} tokens
+  Time: ${new Date(tx.timestamp).toLocaleString()}
+  Type: ${tx.type}
+`
+  )
+  .join("")}
 
-    // Keep only last 24 hours of transactions
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-    this.state.recentTransactions = this.state.recentTransactions.filter(
-      (tx) => tx.timestamp > oneDayAgo
-    );
-  }
+Last Updated: ${new Date(tokenState.lastUpdate).toLocaleString()}
+      `.trim();
+    } catch (error) {
+      console.error("Token state provider error:", error);
+      return "Token state temporarily unavailable";
+    }
+  },
+};
 
-  updateBalance(newBalance: number): void {
-    this.state.balance = newBalance;
-  }
-
-  getTransactionHistory(hours: number = 24): Transaction[] {
-    const cutoff = Date.now() - hours * 60 * 60 * 1000;
-    return this.state.recentTransactions.filter((tx) => tx.timestamp > cutoff);
-  }
-}
+export { tokenStateProvider };

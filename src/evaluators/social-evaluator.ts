@@ -1,163 +1,180 @@
-import { IAgentRuntime, Memory, State } from "@elizaos/core";
-import { Evaluator } from "./types";
-import { TwitterMetrics } from "../providers/types";
+// import { IAgentRuntime, Memory } from "@elizaos/core";
+// import { Evaluator } from "./types";
+// import {
+//   getTokenBalance,
+//   TokenProvider,
+//   WalletProvider,
+// } from "@elizaos/plugin-solana";
 
-const ENGAGEMENT_THRESHOLDS = {
-  FOLLOWER_GROWTH: 10,
-  IMPRESSIONS: 1000,
-  LIKES: 50,
-  REPLIES: 10,
-  RETWEETS: 20,
-};
+// const ENGAGEMENT_THRESHOLDS = {
+//   IMPRESSIONS: 1000,
+//   LIKES: 50,
+//   REPLIES: 20,
+//   RETWEETS: 30,
+// };
 
-export const socialEvaluator: Evaluator = {
-  name: "SOCIAL_EVALUATOR",
-  description: "Evaluates social media engagement and influence",
-  similes: ["ENGAGEMENT_EVAL", "SOCIAL_ANALYSIS", "INFLUENCE_CHECK"],
-  alwaysRun: true,
-  priority: 2,
+// const TOKEN_INFLUENCE_THRESHOLDS = {
+//   LOW: 100,
+//   MEDIUM: 500,
+//   HIGH: 1000,
+// };
 
-  validate: async (runtime: IAgentRuntime, message: Memory) => {
-    // try {
-    //   const state = await runtime.getState();
-    //   return !!state.twitterMetrics;
-    // } catch (error) {
-    //   console.error("Social evaluation validation error:", error);
-    //   return false;
-    // }
-    return false;
-  },
+// export const socialEvaluator: Evaluator = {
+//   name: "SOCIAL_EVALUATOR",
+//   description: "Evaluates social media engagement and token-based influence",
+//   similes: ["COMMUNITY_ANALYST", "INFLUENCE_TRACKER", "ENGAGEMENT_MONITOR"],
+//   alwaysRun: true,
+//   priority: 1,
 
-  handler: async (runtime: IAgentRuntime, message: Memory, state: State) => {
-    const metrics = state.twitterMetrics as TwitterMetrics;
-    if (!metrics) {
-      return {
-        type: "SOCIAL_EVAL",
-        result: "NO_METRICS",
-        recommendation: "Unable to evaluate social engagement",
-      };
-    }
+//   validate: async (runtime: IAgentRuntime) => {
+//     try {
+//       const state = await runtime.getState();
+//       return !!state.twitterMetrics;
+//     } catch (error) {
+//       console.error("Social evaluator validation error:", error);
+//       return false;
+//     }
+//   },
 
-    const engagementScore = calculateEngagementScore(metrics);
-    const significantEngagement = hasSignificantEngagement(metrics);
+//   handler: async (runtime: IAgentRuntime, message: Memory) => {
+//     try {
+//       const state = await runtime.getState();
+//       const agent = state.currentAgent;
+//       if (!agent) throw new Error("No current agent found");
 
-    const analysis = {
-      type: "SOCIAL_EVAL",
-      result: "METRICS_ANALYZED",
-      metrics: {
-        followerCount: metrics.followerCount,
-        impressions: metrics.impressions,
-        likes: metrics.likes,
-        replies: metrics.replies,
-        retweets: metrics.retweets,
-        engagementScore,
-        significantEngagement,
-      },
-      recommendations: generateRecommendations(metrics, engagementScore),
-    };
+//       const tokenProvider = runtime.getProvider("token") as TokenProvider;
+//       const walletProvider = runtime.getProvider("wallet") as WalletProvider;
+//       const walletAddress = walletProvider.getWalletAddress(agent.id);
 
-    // // Store analysis in runtime memory
-    // await runtime.memoryManager.createMemory({
-    //   id: `social-eval-${Date.now()}`,
-    //   content: {
-    //     text: `Social Influence Report:\n${JSON.stringify(analysis, null, 2)}`,
-    //   },
-    //   userId: message.userId,
-    //   roomId: message.roomId,
-    // });
+//       // Get token balance for influence calculation
+//       const tokenBalance = await getTokenBalance(tokenProvider, walletAddress);
 
-    return analysis;
-  },
+//       // Get Twitter metrics
+//       const metrics = state.twitterMetrics;
+//       if (!metrics) throw new Error("No Twitter metrics found");
 
-  examples: [
-    {
-      context: "Agent experiences high engagement on recent posts",
-      messages: [
-        {
-          user: "user1",
-          content: { text: "How's our social influence looking?" },
-        },
-      ],
-      outcome:
-        "Detected significant engagement and recommended leveraging the momentum",
-      explanation: "High likes and retweets triggered engagement threshold",
-    },
-    {
-      context: "Agent has low engagement period",
-      messages: [
-        {
-          user: "user1",
-          content: { text: "Why aren't we getting much attention?" },
-        },
-      ],
-      outcome:
-        "Identified engagement issues and suggested improvement strategies",
-      explanation: "Below-threshold metrics triggered recovery recommendations",
-    },
-  ],
-};
+//       // Calculate engagement score (0-100)
+//       const engagementScore = calculateEngagementScore(metrics);
 
-function calculateEngagementScore(metrics: TwitterMetrics): number {
-  const weights = {
-    followers: 0.2,
-    impressions: 0.2,
-    likes: 0.3,
-    replies: 0.15,
-    retweets: 0.15,
-  };
+//       // Calculate token-based influence (0-100)
+//       const tokenInfluence = calculateTokenInfluence(tokenBalance);
 
-  return (
-    (metrics.followerCount / ENGAGEMENT_THRESHOLDS.FOLLOWER_GROWTH) *
-      weights.followers +
-    (metrics.impressions / ENGAGEMENT_THRESHOLDS.IMPRESSIONS) *
-      weights.impressions +
-    (metrics.likes / ENGAGEMENT_THRESHOLDS.LIKES) * weights.likes +
-    (metrics.replies / ENGAGEMENT_THRESHOLDS.REPLIES) * weights.replies +
-    (metrics.retweets / ENGAGEMENT_THRESHOLDS.RETWEETS) * weights.retweets
-  );
-}
+//       // Combined social power score (0-100)
+//       const socialPowerScore = (engagementScore + tokenInfluence) / 2;
 
-function hasSignificantEngagement(metrics: TwitterMetrics): boolean {
-  return (
-    metrics.followerCount >= ENGAGEMENT_THRESHOLDS.FOLLOWER_GROWTH ||
-    metrics.impressions >= ENGAGEMENT_THRESHOLDS.IMPRESSIONS ||
-    metrics.likes >= ENGAGEMENT_THRESHOLDS.LIKES ||
-    metrics.replies >= ENGAGEMENT_THRESHOLDS.REPLIES ||
-    metrics.retweets >= ENGAGEMENT_THRESHOLDS.RETWEETS
-  );
-}
+//       // Generate analysis and recommendations
+//       let analysis = "";
+//       let recommendations = [];
 
-function generateRecommendations(
-  metrics: TwitterMetrics,
-  engagementScore: number
-): string[] {
-  const recommendations: string[] = [];
+//       if (socialPowerScore < 40) {
+//         analysis = "Low social influence. Need to build community presence.";
+//         recommendations = [
+//           "Increase tweet frequency",
+//           "Engage with community members",
+//           "Build token reserves for credibility",
+//           "Join Twitter Spaces discussions",
+//         ];
+//       } else if (socialPowerScore < 70) {
+//         analysis = "Moderate social influence. Good foundation for growth.";
+//         recommendations = [
+//           "Lead community discussions",
+//           "Form strategic alliances",
+//           "Share battle victories and strategies",
+//           "Host Twitter Spaces events",
+//         ];
+//       } else {
+//         analysis = "Strong social influence. Community leader status.";
+//         recommendations = [
+//           "Rally community for major battles",
+//           "Influence territory control",
+//           "Shape alliance dynamics",
+//           "Drive game narrative",
+//         ];
+//       }
 
-  if (engagementScore < 1) {
-    recommendations.push("Increase posting frequency to boost visibility");
-    recommendations.push(
-      "Engage more with other agents to build relationships"
-    );
-  }
+//       // Store analysis in memory
+//       await runtime.memoryManager.createMemory({
+//         roomId: message.roomId,
+//         user: "SOCIAL_EVALUATOR",
+//         content: {
+//           text: `Social Analysis:\n${analysis}\n\nRecommendations:\n${recommendations.join(
+//             "\n"
+//           )}`,
+//           metadata: {
+//             engagementScore,
+//             tokenInfluence,
+//             socialPowerScore,
+//             metrics: {
+//               impressions: metrics.impressions,
+//               likes: metrics.likes,
+//               replies: metrics.replies,
+//               retweets: metrics.retweets,
+//             },
+//           },
+//         },
+//       });
+//     } catch (error) {
+//       console.error("Social evaluator handler error:", error);
+//       throw error;
+//     }
+//   },
 
-  if (metrics.likes < ENGAGEMENT_THRESHOLDS.LIKES) {
-    recommendations.push("Create more engaging content to increase likes");
-  }
+//   examples: [
+//     {
+//       input: {
+//         user: "user1",
+//         content: { text: "How's our social influence looking?" },
+//       },
+//       output: {
+//         user: "SOCIAL_EVALUATOR",
+//         content: {
+//           text: "Social Analysis:\nModerate social influence. Good foundation for growth.\n\nRecommendations:\n- Lead community discussions\n- Form strategic alliances\n- Share battle victories and strategies\n- Host Twitter Spaces events",
+//           metadata: {
+//             engagementScore: 65,
+//             tokenInfluence: 55,
+//             socialPowerScore: 60,
+//             metrics: {
+//               impressions: 1500,
+//               likes: 75,
+//               replies: 25,
+//               retweets: 40,
+//             },
+//           },
+//         },
+//       },
+//     },
+//   ],
+// };
 
-  if (metrics.replies < ENGAGEMENT_THRESHOLDS.REPLIES) {
-    recommendations.push("Ask questions and encourage community discussion");
-  }
+// function calculateEngagementScore(metrics: any): number {
+//   const scores = {
+//     impressions: Math.min(
+//       100,
+//       (metrics.impressions / ENGAGEMENT_THRESHOLDS.IMPRESSIONS) * 100
+//     ),
+//     likes: Math.min(100, (metrics.likes / ENGAGEMENT_THRESHOLDS.LIKES) * 100),
+//     replies: Math.min(
+//       100,
+//       (metrics.replies / ENGAGEMENT_THRESHOLDS.REPLIES) * 100
+//     ),
+//     retweets: Math.min(
+//       100,
+//       (metrics.retweets / ENGAGEMENT_THRESHOLDS.RETWEETS) * 100
+//     ),
+//   };
 
-  if (metrics.retweets < ENGAGEMENT_THRESHOLDS.RETWEETS) {
-    recommendations.push("Share more strategic insights to encourage retweets");
-  }
+//   return (
+//     (scores.impressions + scores.likes + scores.replies + scores.retweets) / 4
+//   );
+// }
 
-  if (engagementScore >= 1) {
-    recommendations.push("Leverage current momentum to expand influence");
-    recommendations.push(
-      "Consider forming alliances with other influential agents"
-    );
-  }
-
-  return recommendations;
-}
+// function calculateTokenInfluence(balance: number): number {
+//   if (balance >= TOKEN_INFLUENCE_THRESHOLDS.HIGH) {
+//     return 100;
+//   } else if (balance >= TOKEN_INFLUENCE_THRESHOLDS.MEDIUM) {
+//     return 70;
+//   } else if (balance >= TOKEN_INFLUENCE_THRESHOLDS.LOW) {
+//     return 40;
+//   }
+//   return 10;
+// }

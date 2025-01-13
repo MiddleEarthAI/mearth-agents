@@ -1,179 +1,138 @@
-import { IAgentRuntime, Memory, State } from "@elizaos/core";
-import { Evaluator } from "./types";
-import { TokenState, Transaction } from "../providers/types";
+// import { IAgentRuntime, Memory } from "@elizaos/core";
+// import { Evaluator } from "./types";
+// import {
+//   getTokenBalance,
+//   TokenProvider,
+//   WalletProvider,
+// } from "@elizaos/plugin-solana";
 
-const TOKEN_THRESHOLDS = {
-  LOW: 100,
-  MEDIUM: 500,
-  HIGH: 1000,
-};
+// const TOKEN_THRESHOLDS = {
+//   LOW: 100,
+//   MEDIUM: 500,
+//   HIGH: 1000,
+// };
 
-export const tokenEvaluator: Evaluator = {
-  name: "TOKEN_EVALUATOR",
-  description:
-    "Evaluates token balances, transaction history, and economic strategies",
-  similes: ["WEALTH_EVAL", "ECONOMIC_ANALYSIS", "TOKEN_CHECK"],
-  alwaysRun: true,
-  priority: 3,
+// export const tokenEvaluator: Evaluator = {
+//   name: "TOKEN_EVALUATOR",
+//   description:
+//     "Evaluates token balances and transaction history to provide economic insights",
+//   similes: ["WEALTH_ADVISOR", "ECONOMIC_ANALYST", "TREASURY_MANAGER"],
+//   alwaysRun: true,
+//   priority: 2,
 
-  validate: async (runtime: IAgentRuntime, message: Memory) => {
-    // try {
-    //   const state = await runtime.getState();
-    //   return !!state.tokenState;
-    // } catch (error) {
-    //   console.error("Token evaluation validation error:", error);
-    //   return false;
-    // }
-    return false;
-  },
+//   validate: async (runtime: IAgentRuntime) => {
+//     try {
+//       const tokenProvider = runtime.getProvider("token") as TokenProvider;
+//       return !!tokenProvider;
+//     } catch (error) {
+//       console.error("Token evaluator validation error:", error);
+//       return false;
+//     }
+//   },
 
-  handler: async (runtime: IAgentRuntime, message: Memory, state: State) => {
-    const tokenState = state.tokenState as TokenState;
-    if (!tokenState) {
-      return {
-        type: "TOKEN_EVAL",
-        result: "NO_TOKEN_STATE",
-        recommendation: "Unable to evaluate token status",
-      };
-    }
+//   handler: async (runtime: IAgentRuntime, message: Memory) => {
+//     try {
+//       const state = await runtime.getState();
+//       const agent = state.currentAgent;
+//       if (!agent) throw new Error("No current agent found");
 
-    const analysis = {
-      type: "TOKEN_EVAL",
-      result: "TOKEN_ANALYZED",
-      metrics: {
-        currentBalance: tokenState.balance,
-        wealthLevel: getWealthLevel(tokenState.balance),
-        recentActivity: analyzeRecentTransactions(
-          tokenState.recentTransactions
-        ),
-        netFlow: calculateNetFlow(tokenState.recentTransactions),
-        volatility: calculateVolatility(tokenState.recentTransactions),
-      },
-      recommendations: generateRecommendations(tokenState),
-    };
+//       const tokenProvider = runtime.getProvider("token") as TokenProvider;
+//       const walletProvider = runtime.getProvider("wallet") as WalletProvider;
+//       const walletAddress = walletProvider.getWalletAddress(agent.id);
 
-    // // Store analysis in runtime memory
-    // await runtime.memoryManager.createMemory({
-    //   id: `token-eval-${Date.now()}`,
-    //   content: {
-    //     text: `Token Analysis Report:\n${JSON.stringify(analysis, null, 2)}`,
-    //   },
-    //   userId: message.userId,
-    //   roomId: message.roomId,
-    // });
+//       // Get current token balance
+//       const balance = await getTokenBalance(tokenProvider, walletAddress);
 
-    return analysis;
-  },
+//       // Get recent transactions
+//       const transactions = await tokenProvider.getRecentTransactions(
+//         walletAddress
+//       );
 
-  examples: [
-    {
-      context: "Agent has accumulated significant tokens",
-      messages: [
-        {
-          user: "user1",
-          content: { text: "How are our token reserves looking?" },
-        },
-      ],
-      outcome:
-        "Identified strong token position and suggested strategic opportunities",
-      explanation:
-        "High token balance triggered aggressive strategy recommendations",
-    },
-    {
-      context: "Agent experiences token losses from battles",
-      messages: [
-        {
-          user: "user1",
-          content: {
-            text: "We've lost some battles, what's our token situation?",
-          },
-        },
-      ],
-      outcome: "Detected token depletion and recommended recovery strategies",
-      explanation: "Recent battle losses triggered defensive recommendations",
-    },
-  ],
-};
+//       // Calculate net token flow
+//       const netFlow = transactions.reduce((sum, tx) => sum + tx.amount, 0);
 
-function getWealthLevel(balance: number): string {
-  if (balance >= TOKEN_THRESHOLDS.HIGH) return "HIGH";
-  if (balance >= TOKEN_THRESHOLDS.MEDIUM) return "MEDIUM";
-  return "LOW";
-}
+//       // Calculate token volatility (standard deviation of transaction amounts)
+//       const amounts = transactions.map((tx) => tx.amount);
+//       const mean = amounts.reduce((sum, amt) => sum + amt, 0) / amounts.length;
+//       const variance =
+//         amounts.reduce((sum, amt) => sum + Math.pow(amt - mean, 2), 0) /
+//         amounts.length;
+//       const volatility = Math.sqrt(variance);
 
-function analyzeRecentTransactions(transactions: Transaction[]): {
-  battleLosses: number;
-  battleGains: number;
-  allianceActivity: number;
-} {
-  return transactions.reduce(
-    (acc, tx) => ({
-      battleLosses:
-        acc.battleLosses +
-        (tx.type === "BATTLE" && tx.amount < 0 ? Math.abs(tx.amount) : 0),
-      battleGains:
-        acc.battleGains +
-        (tx.type === "BATTLE" && tx.amount > 0 ? tx.amount : 0),
-      allianceActivity: acc.allianceActivity + (tx.type === "ALLIANCE" ? 1 : 0),
-    }),
-    {
-      battleLosses: 0,
-      battleGains: 0,
-      allianceActivity: 0,
-    }
-  );
-}
+//       // Generate analysis and recommendations
+//       let analysis = "";
+//       let recommendations = [];
 
-function calculateNetFlow(transactions: Transaction[]): number {
-  return transactions.reduce((sum, tx) => sum + tx.amount, 0);
-}
+//       if (balance < TOKEN_THRESHOLDS.LOW) {
+//         analysis =
+//           "Critical token level. High risk of vulnerability in battles.";
+//         recommendations = [
+//           "Avoid battles until token reserves are replenished",
+//           "Focus on forming defensive alliances",
+//           "Consider strategic retreat to safer territories",
+//         ];
+//       } else if (balance < TOKEN_THRESHOLDS.MEDIUM) {
+//         analysis = "Moderate token reserves. Cautious engagement advised.";
+//         recommendations = [
+//           "Engage in selective battles with favorable odds",
+//           "Build alliances to pool resources",
+//           "Monitor token flow for opportunities",
+//         ];
+//       } else {
+//         analysis =
+//           "Strong token position. Multiple strategic options available.";
+//         recommendations = [
+//           "Consider aggressive expansion",
+//           "Lead alliance formations",
+//           "Target high-value territories",
+//         ];
+//       }
 
-function calculateVolatility(transactions: Transaction[]): number {
-  if (transactions.length < 2) return 0;
+//       // Store analysis in memory
+//       await runtime.memoryManager.createMemory({
+//         roomId: message.roomId,
+//         user: "TOKEN_EVALUATOR",
+//         content: {
+//           text: `Token Analysis:\n${analysis}\n\nRecommendations:\n${recommendations.join(
+//             "\n"
+//           )}`,
+//           metadata: {
+//             balance,
+//             netFlow,
+//             volatility,
+//             riskLevel:
+//               balance < TOKEN_THRESHOLDS.LOW
+//                 ? "HIGH"
+//                 : balance < TOKEN_THRESHOLDS.MEDIUM
+//                 ? "MEDIUM"
+//                 : "LOW",
+//           },
+//         },
+//       });
+//     } catch (error) {
+//       console.error("Token evaluator handler error:", error);
+//       throw error;
+//     }
+//   },
 
-  const amounts = transactions.map((tx) => tx.amount);
-  const mean =
-    amounts.reduce((sum, amount) => sum + amount, 0) / amounts.length;
-  const squaredDiffs = amounts.map((amount) => Math.pow(amount - mean, 2));
-  return Math.sqrt(
-    squaredDiffs.reduce((sum, diff) => sum + diff, 0) / amounts.length
-  );
-}
-
-function generateRecommendations(tokenState: TokenState): string[] {
-  const recommendations: string[] = [];
-  const activity = analyzeRecentTransactions(tokenState.recentTransactions);
-  const netFlow = calculateNetFlow(tokenState.recentTransactions);
-
-  if (tokenState.balance < TOKEN_THRESHOLDS.LOW) {
-    recommendations.push(
-      "Critical: Build up token reserves before engaging in battles"
-    );
-    recommendations.push("Consider forming alliances for protection");
-  }
-
-  if (activity.battleLosses > activity.battleGains) {
-    recommendations.push(
-      "Recent battles have been costly - adopt defensive strategy"
-    );
-    recommendations.push("Focus on recovery and rebuilding token reserves");
-  }
-
-  if (netFlow < 0) {
-    recommendations.push(
-      "Negative token flow detected - reduce risky engagements"
-    );
-    recommendations.push(
-      "Look for opportunities to gain tokens through alliances"
-    );
-  }
-
-  if (tokenState.balance >= TOKEN_THRESHOLDS.HIGH) {
-    recommendations.push(
-      "Strong token position - consider aggressive expansion"
-    );
-    recommendations.push("Use token advantage to form beneficial alliances");
-  }
-
-  return recommendations;
-}
+//   examples: [
+//     {
+//       input: {
+//         user: "user1",
+//         content: { text: "What's my current token status?" },
+//       },
+//       output: {
+//         user: "TOKEN_EVALUATOR",
+//         content: {
+//           text: "Token Analysis:\nModerate token reserves. Cautious engagement advised.\n\nRecommendations:\n- Engage in selective battles with favorable odds\n- Build alliances to pool resources\n- Monitor token flow for opportunities",
+//           metadata: {
+//             balance: 300,
+//             netFlow: -50,
+//             volatility: 25,
+//             riskLevel: "MEDIUM",
+//           },
+//         },
+//       },
+//     },
+//   ],
+// };

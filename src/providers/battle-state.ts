@@ -1,80 +1,74 @@
-import { Provider, BattleState, Battle, BattleOutcome } from "./types";
+import { Provider, IAgentRuntime, Memory, State } from "@elizaos/core";
+import { BattleState, Battle, BattleOutcome } from "./types";
 
-export class BattleStateProvider implements Provider {
-  name = "battle_state_provider";
-  description =
-    "Provides battle state including active battles and recent outcomes";
-  private state: BattleState = {
-    activeBattles: [],
-    recentOutcomes: [],
-    lastUpdate: 0,
-  };
+const battleStateProvider: Provider = {
+  get: async (
+    runtime: IAgentRuntime,
+    message: Memory,
+    state?: State
+  ): Promise<string> => {
+    try {
+      // const battleState = state?.battleState as BattleState;
+      // if (!battleState) {
+      //   return "No battle state available";
+      // }
 
-  async initialize(): Promise<void> {
-    // Initialize battle state
-    // TODO: Load any persisted battle data
-  }
+      const agentId = runtime.agentId;
+      const battleState = {
+        activeBattles: [],
+        recentOutcomes: [],
+        lastUpdate: new Date().toISOString(),
+      };
 
-  async update(): Promise<void> {
-    // Update battle state
-    // TODO: Update active battles and outcomes
-    this.cleanupOldBattles();
-  }
+      // Get active battles for this agent
+      const activeBattles = battleState.activeBattles.filter(
+        (battle) => battle.attacker === agentId || battle.defender === agentId
+      );
 
-  getState(): Promise<BattleState> {
-    return Promise.resolve(this.state);
-  }
+      // Get recent battle outcomes for this agent
+      const recentOutcomes = battleState.recentOutcomes.filter(
+        (outcome) => outcome.winner === agentId || outcome.loser === agentId
+      );
 
-  addBattle(battle: Battle): void {
-    this.state.activeBattles.push(battle);
-  }
+      // Format battle information
+      const battleInfo = `
+Battle State Information:
 
-  recordOutcome(outcome: BattleOutcome): void {
-    // Remove the battle from active battles
-    this.state.activeBattles = this.state.activeBattles.filter(
-      (battle) => battle.id !== outcome.battleId
-    );
+Active Battles (${activeBattles.length}):
+${activeBattles
+  .map(
+    (battle) => `
+- Battle ID: ${battle.id}
+  Attacker: ${battle.attacker}
+  Defender: ${battle.defender}
+  Started: ${new Date(battle.startTime).toLocaleString()}
+  Tokens Burned: ${battle.tokensBurned}
+`
+  )
+  .join("")}
 
-    // Add to recent outcomes
-    this.state.recentOutcomes.push(outcome);
+Recent Battle Outcomes (${recentOutcomes.length}):
+${recentOutcomes
+  .map(
+    (outcome) => `
+- Battle ID: ${outcome.battleId}
+  Winner: ${outcome.winner}
+  Loser: ${outcome.loser}
+  Tokens Won: ${outcome.tokensWon}
+  Ended: ${new Date(outcome.endTime).toLocaleString()}
+`
+  )
+  .join("")}
 
-    // Keep only last 24 hours of outcomes
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-    this.state.recentOutcomes = this.state.recentOutcomes.filter(
-      (outcome) => outcome.endTime > oneDayAgo
-    );
-  }
+Last Updated: ${new Date(battleState.lastUpdate).toLocaleString()}
+      `.trim();
 
-  private cleanupOldBattles(): void {
-    const now = Date.now();
-    this.state.activeBattles = this.state.activeBattles.filter((battle) => {
-      const battleEndTime = battle.startTime + battle.duration;
-      return battleEndTime > now;
-    });
-  }
+      return battleInfo;
+    } catch (error) {
+      console.error("Battle state provider error:", error);
+      return "Battle state temporarily unavailable";
+    }
+  },
+};
 
-  getActiveBattlesForAgent(agentId: string): Battle[] {
-    return this.state.activeBattles.filter(
-      (battle) => battle.attacker === agentId || battle.defender === agentId
-    );
-  }
-
-  getRecentOutcomesForAgent(agentId: string): BattleOutcome[] {
-    return this.state.recentOutcomes.filter(
-      (outcome) => outcome.winner === agentId || outcome.loser === agentId
-    );
-  }
-
-  canInitiateBattle(attackerId: string, defenderId: string): boolean {
-    // Check if either agent is already in a battle
-    const existingBattle = this.state.activeBattles.find(
-      (battle) =>
-        battle.attacker === attackerId ||
-        battle.attacker === defenderId ||
-        battle.defender === attackerId ||
-        battle.defender === defenderId
-    );
-
-    return !existingBattle;
-  }
-}
+export { battleStateProvider };

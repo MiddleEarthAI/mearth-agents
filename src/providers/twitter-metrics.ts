@@ -1,76 +1,71 @@
-import { Provider, TwitterMetrics } from "./types";
+import { Provider, IAgentRuntime, Memory, State } from "@elizaos/core";
+import { TwitterMetrics } from "./types";
 
-export class TwitterMetricsProvider implements Provider {
-  name = "twitter_metrics_provider";
-  description = "Provides Twitter engagement metrics and social influence data";
-  private state: TwitterMetrics = {
-    followerCount: 0,
-    impressions: 0,
-    likes: 0,
-    replies: 0,
-    retweets: 0,
-    significantEngagement: false,
-    lastUpdate: 0,
-  };
+const twitterMetricsProvider: Provider = {
+  get: async (
+    runtime: IAgentRuntime,
+    message: Memory,
+    state?: State
+  ): Promise<string> => {
+    try {
+      // const metrics = state?.twitterMetrics as TwitterMetrics;
+      // if (!metrics) {
+      //   return "No Twitter metrics available";
+      // }
+      const metrics = {
+        followerCount: Math.random() * 1000,
+        impressions: Math.random() * 1000,
+        likes: Math.random() * 1000,
+        replies: Math.random() * 1000,
+        retweets: Math.random() * 1000,
+        lastUpdate: new Date().toISOString(),
+      };
 
-  async initialize(): Promise<void> {
-    // Initialize Twitter metrics
-    // TODO: Load initial metrics from Twitter API
-  }
+      // Calculate engagement score
+      const engagementScore =
+        (metrics.likes * 2 + metrics.replies * 3 + metrics.retweets * 4) / 100;
 
-  async update(): Promise<void> {
-    // Update Twitter metrics
-    // TODO: Fetch latest metrics from Twitter API
-  }
+      // Check for significant engagement
+      const hasSignificantEngagement =
+        metrics.impressions > 1000 ||
+        metrics.likes > 50 ||
+        metrics.replies > 10 ||
+        metrics.retweets > 20;
 
-  getState(): Promise<TwitterMetrics> {
-    return Promise.resolve(this.state);
-  }
+      // Generate recommendations
+      const recommendations: string[] = [];
+      if (metrics.replies > metrics.retweets) {
+        recommendations.push("Engage more with your supporters");
+      }
+      // if (metrics.impressions > metrics.followerCount * 5) {
+      //   recommendations.push("Your moves are getting attention - capitalize on it");
+      // }
+      // if (metrics.followerCount > 1000) {
+      //   recommendations.push("You have a strong following - use it to gather more tokens");
+      // }
 
-  updateMetrics(metrics: Partial<TwitterMetrics>): void {
-    this.state = {
-      ...this.state,
-      ...metrics,
-    };
-  }
+      // Format metrics information
+      return `
+Twitter Metrics:
+- Followers: ${metrics.followerCount}
+- Impressions: ${metrics.impressions}
+- Likes: ${metrics.likes}
+- Replies: ${metrics.replies} 
+- Retweets: ${metrics.retweets}
 
-  getEngagementScore(): number {
-    return (
-      (this.state.likes * 2 +
-        this.state.replies * 3 +
-        this.state.retweets * 4) /
-      100
-    );
-  }
+Engagement Score: ${engagementScore}
+Significant Engagement: ${hasSignificantEngagement}
 
-  hasSignificantEngagement(): boolean {
-    return (
-      this.state.impressions > 1000 ||
-      this.state.likes > 50 ||
-      this.state.replies > 10 ||
-      this.state.retweets > 20
-    );
-  }
+Recommendations:
+${recommendations.map((r) => `- ${r}`).join("\n")}
 
-  getRecommendations(): string[] {
-    const recommendations: string[] = [];
-
-    if (this.state.replies > this.state.retweets) {
-      recommendations.push("Engage more with your supporters");
+  Last Updated: ${new Date(metrics.lastUpdate).toLocaleString()}
+      `.trim();
+    } catch (error) {
+      console.error("Twitter metrics provider error:", error);
+      return "Twitter metrics temporarily unavailable";
     }
+  },
+};
 
-    if (this.state.impressions > this.state.followerCount * 5) {
-      recommendations.push(
-        "Your moves are getting attention - capitalize on it"
-      );
-    }
-
-    if (this.state.followerCount > 1000) {
-      recommendations.push(
-        "You have a strong following - use it to gather more tokens"
-      );
-    }
-
-    return recommendations;
-  }
-}
+export { twitterMetricsProvider };

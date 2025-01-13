@@ -74,6 +74,26 @@ BEGIN
         )', vector_dim);
 END $$;
 
+-- Table for storing agent data in the game world
+CREATE TABLE IF NOT EXISTS mearth_agents (
+    -- Unique identifier for each agent
+    "id" UUID PRIMARY KEY,
+    -- Timestamp when agent was created
+    "createdAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    -- Display name of the agent
+    "name" TEXT,
+    -- Current position in the game world as {x: number, y: number}
+    "position" JSONB NOT NULL,
+    -- Number of tokens the agent currently holds
+    "tokens" INTEGER NOT NULL,
+    -- Array of agent IDs that this agent is allied with
+    "alliances" JSONB DEFAULT '[]'::jsonb NOT NULL,
+    -- Cooldown timers for forming new alliances, keyed by agent ID
+    "allianceCooldowns" JSONB DEFAULT '{}'::jsonb NOT NULL,
+    -- Cooldown timers for initiating battles, keyed by agent ID  
+    "battleCooldowns" JSONB DEFAULT '{}'::jsonb NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS  goals (
     "id" UUID PRIMARY KEY,
     "createdAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

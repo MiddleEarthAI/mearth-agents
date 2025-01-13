@@ -1,102 +1,231 @@
-import { IAgentRuntime, Memory, State } from "@elizaos/core";
-import { Evaluator } from "./types";
-import { Agent } from "../types";
-// import { canBattle } from "../actions/battle";
+// import { IAgentRuntime, Memory } from "@elizaos/core";
+// import { Evaluator } from "./types";
+// import {
+//   getTokenBalance,
+//   TokenProvider,
+//   WalletProvider,
+// } from "@elizaos/plugin-solana";
+// import { calculateDistance } from "../actions/movement";
+// import { Agent } from "../types";
 
-export const battleEvaluator: Evaluator = {
-  name: "BATTLE_EVALUATOR",
-  description:
-    "Evaluates battle opportunities and risks based on agent positions, token balances, and terrain",
-  similes: ["COMBAT_EVAL", "FIGHT_ANALYSIS", "BATTLE_CHECK"],
-  alwaysRun: true,
-  priority: 1,
+// const BATTLE_RANGE = 10;
+// const TOKEN_RISK_THRESHOLDS = {
+//   LOW: 100,
+//   MEDIUM: 500,
+//   HIGH: 1000,
+// };
 
-  validate: async (runtime: IAgentRuntime, message: Memory) => {
-    // try {
-    //   const state = await runtime.getState();
-    //   const agent = state.currentAgent as Agent;
-    //   return (
-    //     state.agents?.some(
-    //       (other) =>
-    //         other.id !== agent.id && other.isAlive && canBattle(agent, other)
-    //     ) || false
-    //   );
-    // } catch (error) {
-    //   console.error("Battle evaluation validation error:", error);
-    //   return false;
-    // }
-    return false;
-  },
+// export const battleEvaluator: Evaluator = {
+//   name: "BATTLE_EVALUATOR",
+//   description:
+//     "Evaluates battle opportunities and risks based on token balances and positions",
+//   similes: ["BATTLE_STRATEGIST", "COMBAT_ADVISOR", "RISK_ASSESSOR"],
+//   alwaysRun: true,
+//   priority: 3,
 
-  handler: async (runtime: IAgentRuntime, message: Memory, state: State) => {
-    // const agent = state.currentAgent as Agent;
-    // const nearbyAgents =
-    //   state.agents?.filter(
-    //     (other) =>
-    //       other.id !== agent.id && other.isAlive && canBattle(agent, other)
-    //   ) || [];
-    // if (nearbyAgents.length === 0) {
-    //   return {
-    //     type: "BATTLE_EVAL",
-    //     result: "NO_TARGETS",
-    //     recommendation: "Continue exploring the map",
-    //   };
-    // }
-    // const battleOpportunities = nearbyAgents.map((target) => {
-    //   const combinedTokens = agent.tokens + target.tokens;
-    //   const winProbability = agent.tokens / combinedTokens;
-    //   const riskLevel = target.tokens > agent.tokens ? "HIGH" : "LOW";
-    //   return {
-    //     targetId: target.id,
-    //     targetName: target.name,
-    //     winProbability,
-    //     riskLevel,
-    //     potentialGain: Math.floor(target.tokens * 0.4), // 40% of target's tokens
-    //     potentialLoss: Math.floor(agent.tokens * 0.4), // 40% of own tokens
-    //     hasAllies: target.alliances.length > 0,
-    //   };
-    // });
-    // const bestOpportunity = battleOpportunities.reduce((best, current) =>
-    //   current.winProbability > best.winProbability ? current : best
-    // );
-    // return {
-    //   type: "BATTLE_EVAL",
-    //   result: "OPPORTUNITIES_FOUND",
-    //   opportunities: battleOpportunities,
-    //   recommendation:
-    //     bestOpportunity.winProbability > 0.6
-    //       ? `Consider attacking ${bestOpportunity.targetName} with ${Math.round(
-    //           bestOpportunity.winProbability * 100
-    //         )}% win chance`
-    //       : "Current battle opportunities are too risky",
-    // };
-  },
+//   validate: async (runtime: IAgentRuntime) => {
+//     try {
+//       const state = await runtime.getState();
+//       return !!state.agents && state.agents.length > 1;
+//     } catch (error) {
+//       console.error("Battle evaluator validation error:", error);
+//       return false;
+//     }
+//   },
 
-  examples: [
-    {
-      context: "Agent encounters a weaker opponent",
-      messages: [
-        {
-          user: "user1",
-          content: { text: "Should I attack Agent2?" },
-        },
-      ],
-      outcome: "Recommended battle due to favorable token ratio",
-      explanation:
-        "Agent had more tokens than opponent, resulting in >60% win probability",
-    },
-    {
-      context: "Agent encounters multiple opponents",
-      messages: [
-        {
-          user: "user1",
-          content: { text: "Multiple agents nearby, what should I do?" },
-        },
-      ],
-      outcome:
-        "Analyzed all nearby opponents and recommended the most favorable target",
-      explanation:
-        "Compared token ratios and ally status of all potential targets",
-    },
-  ],
-};
+//   handler: async (runtime: IAgentRuntime, message: Memory) => {
+//     try {
+//       const state = await runtime.getState();
+//       const agent = state.currentAgent;
+//       if (!agent) throw new Error("No current agent found");
+
+//       const tokenProvider = runtime.getProvider("token") as TokenProvider;
+//       const walletProvider = runtime.getProvider("wallet") as WalletProvider;
+//       const agentWallet = walletProvider.getWalletAddress(agent.id);
+
+//       // Get agent's token balance
+//       const agentBalance = await getTokenBalance(tokenProvider, agentWallet);
+
+//       // Find nearby agents
+//       const nearbyAgents = state.agents?.filter((other) => {
+//         if (other.id === agent.id) return false;
+//         const distance = calculateDistance(agent.position, other.position);
+//         return distance <= BATTLE_RANGE;
+//       });
+
+//       if (!nearbyAgents?.length) {
+//         await runtime.memoryManager.createMemory({
+//           roomId: message.roomId,
+//           user: "BATTLE_EVALUATOR",
+//           content: {
+//             text: "No nearby agents to battle.",
+//             metadata: {
+//               nearbyAgents: 0,
+//               tokenBalance: agentBalance,
+//             },
+//           },
+//         });
+//         return;
+//       }
+
+//       // Analyze each nearby agent
+//       const battleAnalyses = await Promise.all(
+//         nearbyAgents.map(async (other) => {
+//           const otherWallet = walletProvider.getWalletAddress(other.id);
+//           const otherBalance = await getTokenBalance(
+//             tokenProvider,
+//             otherWallet
+//           );
+//           const tokenRatio = agentBalance / otherBalance;
+//           const distance = calculateDistance(agent.position, other.position);
+
+//           return {
+//             agentId: other.id,
+//             name: other.name,
+//             distance,
+//             tokenRatio,
+//             riskLevel: calculateRiskLevel(agentBalance, otherBalance),
+//             recommendation: generateBattleRecommendation(
+//               agentBalance,
+//               otherBalance,
+//               distance
+//             ),
+//           };
+//         })
+//       );
+
+//       // Generate overall analysis
+//       const analysis = generateBattleAnalysis(battleAnalyses, agentBalance);
+
+//       // Store analysis in memory
+//       await runtime.memoryManager.createMemory({
+//         roomId: message.roomId,
+//         user: "BATTLE_EVALUATOR",
+//         content: {
+//           text: `Battle Analysis:\n${
+//             analysis.summary
+//           }\n\nRecommendations:\n${analysis.recommendations.join("\n")}`,
+//           metadata: {
+//             nearbyAgents: nearbyAgents.length,
+//             tokenBalance: agentBalance,
+//             battleAnalyses,
+//           },
+//         },
+//       });
+//     } catch (error) {
+//       console.error("Battle evaluator handler error:", error);
+//       throw error;
+//     }
+//   },
+
+//   examples: [
+//     {
+//       input: {
+//         user: "user1",
+//         content: { text: "Should we attack anyone nearby?" },
+//       },
+//       output: {
+//         user: "BATTLE_EVALUATOR",
+//         content: {
+//           text: "Battle Analysis:\nTwo potential targets detected. One favorable matchup, one high risk.\n\nRecommendations:\n- Consider attacking Agent2 (2.1x token advantage)\n- Avoid engaging Agent3 (0.4x token disadvantage)\n- Maintain current position for tactical advantage",
+//           metadata: {
+//             nearbyAgents: 2,
+//             tokenBalance: 500,
+//             battleAnalyses: [
+//               {
+//                 agentId: "agent2",
+//                 name: "Agent2",
+//                 distance: 5,
+//                 tokenRatio: 2.1,
+//                 riskLevel: "LOW",
+//                 recommendation: "ENGAGE",
+//               },
+//               {
+//                 agentId: "agent3",
+//                 name: "Agent3",
+//                 distance: 8,
+//                 tokenRatio: 0.4,
+//                 riskLevel: "HIGH",
+//                 recommendation: "AVOID",
+//               },
+//             ],
+//           },
+//         },
+//       },
+//     },
+//   ],
+// };
+
+// function calculateRiskLevel(
+//   agentBalance: number,
+//   otherBalance: number
+// ): string {
+//   const ratio = agentBalance / otherBalance;
+//   if (ratio >= 2) return "LOW";
+//   if (ratio >= 0.8) return "MEDIUM";
+//   return "HIGH";
+// }
+
+// function generateBattleRecommendation(
+//   agentBalance: number,
+//   otherBalance: number,
+//   distance: number
+// ): string {
+//   const ratio = agentBalance / otherBalance;
+
+//   if (ratio >= 2) {
+//     return distance <= 5 ? "ENGAGE" : "PURSUE";
+//   }
+//   if (ratio >= 0.8) {
+//     return "MONITOR";
+//   }
+//   return "AVOID";
+// }
+
+// function generateBattleAnalysis(
+//   battleAnalyses: any[],
+//   agentBalance: number
+// ): { summary: string; recommendations: string[] } {
+//   const favorableTargets = battleAnalyses.filter((b) => b.riskLevel === "LOW");
+//   const riskyTargets = battleAnalyses.filter((b) => b.riskLevel === "HIGH");
+
+//   let summary = `${battleAnalyses.length} potential targets detected. `;
+//   if (favorableTargets.length) {
+//     summary += `${favorableTargets.length} favorable matchup(s). `;
+//   }
+//   if (riskyTargets.length) {
+//     summary += `${riskyTargets.length} high risk target(s).`;
+//   }
+
+//   const recommendations = [];
+
+//   if (agentBalance < TOKEN_RISK_THRESHOLDS.LOW) {
+//     recommendations.push(
+//       "Token reserves critically low - avoid all engagements"
+//     );
+//   } else {
+//     favorableTargets.forEach((target) => {
+//       recommendations.push(
+//         `Consider attacking ${target.name} (${target.tokenRatio.toFixed(
+//           1
+//         )}x token advantage)`
+//       );
+//     });
+
+//     riskyTargets.forEach((target) => {
+//       recommendations.push(
+//         `Avoid engaging ${target.name} (${target.tokenRatio.toFixed(
+//           1
+//         )}x token disadvantage)`
+//       );
+//     });
+
+//     if (battleAnalyses.some((b) => b.recommendation === "MONITOR")) {
+//       recommendations.push(
+//         "Monitor evenly matched opponents for opportunities"
+//       );
+//     }
+//   }
+
+//   return { summary, recommendations };
+// }

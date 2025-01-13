@@ -10,7 +10,8 @@
       "TWITTER_DRY_RUN": "false",
       "TWITTER_USERNAME": "testi1151149",
       "TWITTER_PASSWORD": "6iGxvqee5UHBRyh",
-      "TWITTER_EMAIL": "testing13467@web.de"
+      "TWITTER_EMAIL": "testing13467@web.de",
+      "POST_INTERVAL_MIN": "10"
     },
     "voice": {
       "model": "en_US-hfc_female-medium"

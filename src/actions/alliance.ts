@@ -3,11 +3,19 @@
 // import { Agent } from "../types";
 // import { canBattle } from "./battle";
 
+// import {
+//   getTokenBalance,
+//   TokenProvider,
+//   WalletProvider,
+// } from "@elizaos/plugin-solana";
+
 // export interface AllianceAction {
 //   type: ActionType.ALLIANCE;
 //   initiator: string;
 //   ally: string;
 //   combinedTokens: number;
+//   initiatorWallet: string;
+//   allyWallet: string;
 // }
 
 // export interface IgnoreAction {
@@ -20,9 +28,31 @@
 // const ALLIANCE_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 // const BATTLE_COOLDOWN = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
 
-// export const canFormAlliance = (agent1: Agent, agent2: Agent): boolean => {
-//   if (!canBattle(agent1, agent2)) return false; // Must be in range
-//   if (agent1.alliances.includes(agent2.id)) return false; // Already allied
+// export const canFormAlliance = async (
+//   runtime: IAgentRuntime,
+//   agent1: Agent,
+//   agent2: Agent
+// ): Promise<boolean> => {
+//   // Check if in range and not already allied
+//   if (!canBattle(runtime, agent1, agent2)) return false;
+//   if (agent1.alliances.includes(agent2.id)) return false;
+
+//   // Check token balances
+//   const tokenProvider = runtime.getProvider("token") as TokenProvider;
+//   const walletProvider = runtime.getProvider("wallet") as WalletProvider;
+
+//   const agent1Balance = await getTokenBalance(
+//     tokenProvider,
+//     walletProvider.getWalletAddress(agent1.id)
+//   );
+
+//   const agent2Balance = await getTokenBalance(
+//     tokenProvider,
+//     walletProvider.getWalletAddress(agent2.id)
+//   );
+
+//   // Both agents must have tokens to form alliance
+//   if (agent1Balance === 0 || agent2Balance === 0) return false;
 
 //   // Check cooldowns
 //   const cooldownEnd = getAllianceCooldownEnd(agent1, agent2);
@@ -55,31 +85,23 @@
 
 //   validate: async (runtime: IAgentRuntime, message: Memory) => {
 //     try {
-//       const state = await message.content.getState();
+//       const state = await runtime.getState();
 //       const initiator = state.currentAgent as Agent;
 
-//       // Check if message mentions another agent
-//       const text = message.content.text.toLowerCase();
-//       const mentionsAgent = state.agents?.some(
-//         (agent) =>
-//           agent.id !== initiator.id && text.includes(agent.name.toLowerCase())
-//       );
-
-//       if (!mentionsAgent) {
-//         console.error("No target agent mentioned");
-//         return false;
-//       }
-
 //       // Find mentioned agent
+//       const text = message.content.text.toLowerCase();
 //       const ally = state.agents?.find(
 //         (agent) =>
 //           agent.id !== initiator.id && text.includes(agent.name.toLowerCase())
 //       );
 
-//       if (!ally) return false;
+//       if (!ally) {
+//         console.error("No target agent mentioned");
+//         return false;
+//       }
 
 //       // Check if alliance is possible
-//       return canFormAlliance(initiator, ally);
+//       return await canFormAlliance(runtime, initiator, ally);
 //     } catch (error) {
 //       console.error("Alliance validation error:", error);
 //       return false;
@@ -87,6 +109,8 @@
 //   },
 
 //   handler: async (runtime: IAgentRuntime, message: Memory, state?: State) => {
+//     runtime.actions;
+
 //     try {
 //       const initiator = state?.currentAgent as Agent;
 //       const text = message.content.text.toLowerCase();
@@ -99,15 +123,32 @@
 
 //       if (!ally) throw new Error("Ally not found");
 
+//       const walletProvider = runtime.getProvider("wallet") as WalletProvider;
+//       const tokenProvider = runtime.getProvider("token") as TokenProvider;
+
+//       const initiatorWallet = walletProvider.getWalletAddress(initiator.id);
+//       const allyWallet = walletProvider.getWalletAddress(ally.id);
+
+//       const initiatorBalance = await getTokenBalance(
+//         tokenProvider,
+//         initiatorWallet
+//       );
+//       const allyBalance = await getTokenBalance(tokenProvider, allyWallet);
+
 //       // Create alliance action
 //       const allianceAction: AllianceAction = {
 //         type: ActionType.ALLIANCE,
 //         initiator: initiator.id,
 //         ally: ally.id,
-//         combinedTokens: initiator.tokens + ally.tokens,
+//         combinedTokens: initiatorBalance + allyBalance,
+//         initiatorWallet,
+//         allyWallet,
 //       };
 
-//       // Update alliances
+//       // Register alliance on-chain
+//       await tokenProvider.registerAlliance(initiatorWallet, allyWallet);
+
+//       // Update alliances in state
 //       initiator.alliances.push(ally.id);
 //       ally.alliances.push(initiator.id);
 
@@ -134,19 +175,6 @@
 //         user: "agent",
 //         content: {
 //           text: "Proposing an alliance with Agent2. Together we'll be stronger!",
-//           action: "ALLIANCE",
-//         },
-//       },
-//     ],
-//     [
-//       {
-//         user: "user1",
-//         content: { text: "Agent3, shall we join forces against our enemies?" },
-//       },
-//       {
-//         user: "agent",
-//         content: {
-//           text: "Forming an alliance with Agent3. Our combined tokens will make us formidable!",
 //           action: "ALLIANCE",
 //         },
 //       },
