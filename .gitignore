@@ -1,13 +1,7 @@
 *.ts
 dist
-!index.ts
-!character.ts
-!src/
-# .env
-# .env.*
+.env.*
 node_modules
-dist/
-/cache
-# Dockerfile
+cache
 db.sqlite
 .idea
