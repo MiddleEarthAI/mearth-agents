@@ -25,6 +25,13 @@ import {
   parseArguments,
 } from "./config/index.ts";
 import { initializeDatabase } from "./database/index.ts";
+import { battleEvaluator } from "./evaluators/battle-evaluator.ts";
+import { socialEvaluator } from "./evaluators/social-evaluator.ts";
+import { tokenEvaluator } from "./evaluators/token-evaluator.ts";
+import { BattleStateProvider } from "./providers/battle-state.ts";
+import { GameStateProvider } from "./providers/game-state.ts";
+import { TwitterMetricsProvider } from "./providers/twitter-metrics.ts";
+import { TokenStateProvider } from "./providers/token-state.ts";
 
 // Get the current file's directory path
 const __filename = fileURLToPath(import.meta.url);
@@ -58,15 +65,20 @@ export function createAgent(
     databaseAdapter: db,
     token,
     modelProvider: ModelProviderName.ANTHROPIC,
-    evaluators: [],
+    evaluators: [battleEvaluator, socialEvaluator, tokenEvaluator],
     character,
     plugins: [
       bootstrapPlugin,
       nodePlugin,
       // character.settings?.secrets?.WALLET_PUBLIC_KEY ? solanaPlugin : null,
     ].filter(Boolean),
-    providers: [],
-    actions: [],
+    providers: [
+      // BattleStateProvider,
+      // GameStateProvider,
+      // TwitterMetricsProvider,
+      // TokenStateProvider,
+    ],
+    // actions: [Actions],
     services: [],
     managers: [],
     cacheManager: cache,
