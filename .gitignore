@@ -1,5 +1,6 @@
-dist
+.env
 .env.*
+dist
 node_modules
 cache
 db.sqlite

@@ -24,6 +24,7 @@
     "@elizaos/plugin-node": "0.1.7",
     "@elizaos/plugin-solana": "0.1.7",
     "@elizaos/plugin-starknet": "0.1.7",
+    "@elizaos/plugin-tee": "^0.1.8",
     "@solana/web3.js": "^1.98.0",
     "@tavily/core": "0.0.2",
     "amqplib": "0.10.5",

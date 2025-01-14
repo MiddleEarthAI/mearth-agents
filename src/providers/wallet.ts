@@ -39,19 +39,18 @@ interface WalletPortfolio {
   items: Array<Item>;
 }
 
-interface _BirdEyePriceData {
-  data: {
-    [key: string]: {
-      price: number;
-      priceChange24h: number;
-    };
-  };
-}
+// interface _BirdEyePriceData {
+//   data: {
+//     [key: string]: {
+//       price: number;
+//       priceChange24h: number;
+//     };
+//   };
+// }
 
 interface Prices {
   solana: { usd: string };
-  bitcoin: { usd: string };
-  ethereum: { usd: string };
+  mearth: { usd: string };
 }
 
 export class WalletProvider {
