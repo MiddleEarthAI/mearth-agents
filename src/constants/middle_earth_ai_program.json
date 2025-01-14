@@ -1,0 +1,975 @@
+{
+  "address": "FE7WJhRY55XjHcR22ryA3tHLq6fkDNgZBpbh25tto67Q",
+  "metadata": {
+    "name": "middle_earth_ai_program",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "break_alliance",
+      "discriminator": [139, 100, 147, 25, 204, 14, 156, 151],
+      "accounts": [
+        {
+          "name": "initiator",
+          "docs": [
+            "The initiating agent (mutable and signed) that wants to break the alliance."
+          ],
+          "writable": true
+        },
+        {
+          "name": "target_agent",
+          "docs": ["The allied (or target) agent for the alliance."],
+          "writable": true
+        },
+        {
+          "name": "game",
+          "docs": ["The global game state holding the alliance list."],
+          "writable": true,
+          "relations": ["initiator", "target_agent"]
+        },
+        {
+          "name": "authority",
+          "docs": ["The signer for the initiating agent."],
+          "writable": true,
+          "signer": true,
+          "relations": ["initiator"]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim_staking_rewards",
+      "discriminator": [229, 141, 170, 69, 111, 94, 6, 72],
+      "accounts": [
+        {
+          "name": "agent",
+          "docs": ["The agent state."],
+          "writable": true
+        },
+        {
+          "name": "game",
+          "relations": ["agent"]
+        },
+        {
+          "name": "stake_info",
+          "docs": ["Record for the staker."],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [115, 116, 97, 107, 101]
+              },
+              {
+                "kind": "account",
+                "path": "agent"
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "agent_vault",
+          "docs": ["The vault token account associated with the agent."],
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "docs": ["The authority/staker."],
+          "writable": true,
+          "signer": true,
+          "relations": ["agent"]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "form_alliance",
+      "discriminator": [113, 30, 47, 217, 83, 151, 0, 174],
+      "accounts": [
+        {
+          "name": "initiator",
+          "docs": ["The initiating agent (must be mutable and signed)."],
+          "writable": true
+        },
+        {
+          "name": "target_agent",
+          "docs": [
+            "The target agent that the initiator wants to form an alliance with."
+          ],
+          "writable": true
+        },
+        {
+          "name": "game",
+          "docs": ["The global game state holding the alliance list."],
+          "writable": true,
+          "relations": ["initiator", "target_agent"]
+        },
+        {
+          "name": "authority",
+          "docs": ["The signer for the initiating agent."],
+          "writable": true,
+          "signer": true,
+          "relations": ["initiator"]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "ignore_agent",
+      "discriminator": [76, 176, 91, 153, 115, 53, 234, 22],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true
+        },
+        {
+          "name": "game",
+          "relations": ["agent"]
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": ["agent"]
+        }
+      ],
+      "args": [
+        {
+          "name": "target_agent_id",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initialize_game",
+      "discriminator": [44, 62, 102, 247, 126, 208, 130, 215],
+      "accounts": [
+        {
+          "name": "game",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [103, 97, 109, 101]
+              },
+              {
+                "kind": "arg",
+                "path": "game_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "game_id",
+          "type": "u32"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "move_agent",
+      "discriminator": [48, 110, 55, 44, 181, 65, 102, 207],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true
+        },
+        {
+          "name": "game",
+          "relations": ["agent"]
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": ["agent"]
+        }
+      ],
+      "args": [
+        {
+          "name": "new_x",
+          "type": "i32"
+        },
+        {
+          "name": "new_y",
+          "type": "i32"
+        },
+        {
+          "name": "terrain",
+          "type": {
+            "defined": {
+              "name": "TerrainType"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "register_agent",
+      "docs": [
+        "Combined function for agent registration:",
+        "This instruction both initializes an Agent account and adds its metadata",
+        "(including the agent’s public key and name) to the Game’s global agent list."
+      ],
+      "discriminator": [135, 157, 66, 195, 2, 113, 175, 30],
+      "accounts": [
+        {
+          "name": "game",
+          "writable": true
+        },
+        {
+          "name": "agent",
+          "docs": ["The Agent account is initialized using PDA seeds."],
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": ["game"]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "agent_id",
+          "type": "u8"
+        },
+        {
+          "name": "x",
+          "type": "i32"
+        },
+        {
+          "name": "y",
+          "type": "i32"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "resolve_battle",
+      "discriminator": [112, 191, 142, 62, 126, 119, 170, 54],
+      "accounts": [
+        {
+          "name": "winner",
+          "docs": ["Winner agent state."],
+          "writable": true
+        },
+        {
+          "name": "winner_partner",
+          "docs": ["Winner’s alliance partner state."],
+          "writable": true
+        },
+        {
+          "name": "loser",
+          "docs": ["Loser agent state."],
+          "writable": true
+        },
+        {
+          "name": "loser_partner",
+          "docs": ["Loser’s alliance partner state."],
+          "writable": true
+        },
+        {
+          "name": "game",
+          "docs": ["The game state."],
+          "relations": ["winner", "loser"]
+        },
+        {
+          "name": "authority",
+          "docs": ["The authority allowed to resolve battles."],
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "transfer_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "stake_tokens",
+      "discriminator": [136, 126, 91, 162, 40, 131, 13, 127],
+      "accounts": [
+        {
+          "name": "agent",
+          "docs": ["The agent state."],
+          "writable": true
+        },
+        {
+          "name": "game",
+          "relations": ["agent"]
+        },
+        {
+          "name": "stake_info",
+          "docs": ["Record for the staker."],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [115, 116, 97, 107, 101]
+              },
+              {
+                "kind": "account",
+                "path": "agent"
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "staker_source",
+          "docs": [
+            "The staker's token account (source) from which tokens will be deposited."
+          ],
+          "writable": true
+        },
+        {
+          "name": "agent_vault",
+          "docs": [
+            "The vault token account associated with the agent (destination)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "docs": ["The authority/staker."],
+          "writable": true,
+          "signer": true,
+          "relations": ["agent"]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "unstake_tokens",
+      "discriminator": [58, 119, 215, 143, 203, 223, 32, 86],
+      "accounts": [
+        {
+          "name": "agent",
+          "docs": ["The agent state."],
+          "writable": true
+        },
+        {
+          "name": "game",
+          "relations": ["agent"]
+        },
+        {
+          "name": "stake_info",
+          "docs": ["Record for the staker."],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [115, 116, 97, 107, 101]
+              },
+              {
+                "kind": "account",
+                "path": "agent"
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "agent_vault",
+          "docs": [
+            "The vault token account associated with the agent (source for withdrawal)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "agent_authority",
+          "docs": [
+            "The authority account for the vault (this PDA signs on behalf of the vault)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "staker_destination",
+          "docs": [
+            "The staker's token account (destination) for receiving tokens."
+          ],
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "docs": ["The stake owner."],
+          "writable": true,
+          "signer": true,
+          "relations": ["agent"]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Agent",
+      "discriminator": [47, 166, 112, 147, 155, 197, 86, 7]
+    },
+    {
+      "name": "Game",
+      "discriminator": [27, 90, 166, 125, 74, 100, 121, 18]
+    },
+    {
+      "name": "StakeInfo",
+      "discriminator": [66, 62, 68, 70, 108, 179, 183, 235]
+    }
+  ],
+  "events": [
+    {
+      "name": "AgentMoved",
+      "discriminator": [62, 208, 5, 94, 58, 167, 86, 68]
+    },
+    {
+      "name": "BattleInitiated",
+      "discriminator": [143, 241, 154, 163, 133, 237, 42, 247]
+    },
+    {
+      "name": "BattleResolved",
+      "discriminator": [47, 156, 226, 94, 163, 176, 162, 241]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "AgentNotAlive",
+      "msg": "Agent is not alive."
+    },
+    {
+      "code": 6001,
+      "name": "MovementCooldown",
+      "msg": "Movement is on cooldown."
+    },
+    {
+      "code": 6002,
+      "name": "OutOfBounds",
+      "msg": "Agent is out of map bounds."
+    },
+    {
+      "code": 6003,
+      "name": "BattleInProgress",
+      "msg": "Battle is currently in progress."
+    },
+    {
+      "code": 6004,
+      "name": "BattleCooldown",
+      "msg": "Battle is on cooldown."
+    },
+    {
+      "code": 6005,
+      "name": "ReentrancyGuard",
+      "msg": "Reentrancy attempt detected."
+    },
+    {
+      "code": 6006,
+      "name": "AllianceCooldown",
+      "msg": "Alliance is on cooldown."
+    },
+    {
+      "code": 6007,
+      "name": "NotEnoughTokens",
+      "msg": "Not enough tokens for battle."
+    },
+    {
+      "code": 6008,
+      "name": "MaxStakeExceeded",
+      "msg": "Stake amount exceeds maximum allowed."
+    },
+    {
+      "code": 6009,
+      "name": "ClaimCooldown",
+      "msg": "Cannot claim rewards yet."
+    },
+    {
+      "code": 6010,
+      "name": "InvalidTerrain",
+      "msg": "Invalid terrain movement."
+    },
+    {
+      "code": 6011,
+      "name": "TokenTransferError",
+      "msg": "Invalid token transfer."
+    },
+    {
+      "code": 6012,
+      "name": "InsufficientFunds",
+      "msg": "Insufficient Funds Provided."
+    },
+    {
+      "code": 6013,
+      "name": "Unauthorized",
+      "msg": "Unauthorized action."
+    },
+    {
+      "code": 6014,
+      "name": "IgnoreCooldown",
+      "msg": "Cooldown is still active."
+    },
+    {
+      "code": 6015,
+      "name": "InvalidAlliancePartner",
+      "msg": "Invalid alliance partner."
+    },
+    {
+      "code": 6016,
+      "name": "AllianceAlreadyExists",
+      "msg": "An active alliance already exists."
+    },
+    {
+      "code": 6017,
+      "name": "NoAllianceToBreak",
+      "msg": "No active alliance to break."
+    },
+    {
+      "code": 6018,
+      "name": "MaxAgentLimitReached",
+      "msg": "Maximum number of agents reached."
+    },
+    {
+      "code": 6019,
+      "name": "AgentAlreadyExists",
+      "msg": "Agent already exists."
+    },
+    {
+      "code": 6020,
+      "name": "NameTooLong",
+      "msg": "Agent name is too long."
+    }
+  ],
+  "types": [
+    {
+      "name": "Agent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "game",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "id",
+            "type": "u8"
+          },
+          {
+            "name": "x",
+            "type": "i32"
+          },
+          {
+            "name": "y",
+            "type": "i32"
+          },
+          {
+            "name": "is_alive",
+            "type": "bool"
+          },
+          {
+            "name": "last_move",
+            "type": "i64"
+          },
+          {
+            "name": "last_battle",
+            "type": "i64"
+          },
+          {
+            "name": "current_battle_start",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "alliance_with",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "alliance_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "ignore_cooldowns",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "IgnoreCooldown"
+                }
+              }
+            }
+          },
+          {
+            "name": "token_balance",
+            "type": "u64"
+          },
+          {
+            "name": "staked_balance",
+            "type": "u64"
+          },
+          {
+            "name": "last_reward_claim",
+            "type": "i64"
+          },
+          {
+            "name": "total_shares",
+            "type": "u64"
+          },
+          {
+            "name": "last_attack",
+            "type": "i64"
+          },
+          {
+            "name": "last_ignore",
+            "type": "i64"
+          },
+          {
+            "name": "last_alliance",
+            "type": "i64"
+          },
+          {
+            "name": "next_move_time",
+            "type": "i64"
+          },
+          {
+            "name": "last_alliance_agent",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "last_alliance_broken",
+            "type": "i64"
+          },
+          {
+            "name": "vault_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentInfo",
+      "docs": ["Holds basic information for an agent."],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentMoved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": "u8"
+          },
+          {
+            "name": "old_x",
+            "type": "i32"
+          },
+          {
+            "name": "old_y",
+            "type": "i32"
+          },
+          {
+            "name": "new_x",
+            "type": "i32"
+          },
+          {
+            "name": "new_y",
+            "type": "i32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Alliance",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent1",
+            "type": "pubkey"
+          },
+          {
+            "name": "agent2",
+            "type": "pubkey"
+          },
+          {
+            "name": "formed_at",
+            "type": "i64"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BattleInitiated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": "u8"
+          },
+          {
+            "name": "opponent_agent_id",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BattleResolved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "winner_id",
+            "type": "u8"
+          },
+          {
+            "name": "loser_id",
+            "type": "u8"
+          },
+          {
+            "name": "transfer_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Game",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "game_id",
+            "type": "u64"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "rewards_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "map_diameter",
+            "type": "u32"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "last_update",
+            "type": "i64"
+          },
+          {
+            "name": "reentrancy_guard",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "alliances",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "Alliance"
+                }
+              }
+            }
+          },
+          {
+            "name": "agents",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "AgentInfo"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "IgnoreCooldown",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": "u8"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StakeInfo",
+      "docs": [
+        "A per‑staker record for deposits (staked tokens) and issued shares."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent",
+            "docs": ["The Agent (vault) this stake is associated with."],
+            "type": "pubkey"
+          },
+          {
+            "name": "staker",
+            "docs": ["The staker’s public key."],
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "docs": ["The amount of tokens the user has deposited."],
+            "type": "u64"
+          },
+          {
+            "name": "shares",
+            "docs": ["The number of shares the user holds."],
+            "type": "u64"
+          },
+          {
+            "name": "last_reward_timestamp",
+            "docs": [
+              "The last time (Unix timestamp) this staker claimed rewards."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "docs": ["Bump value for the PDA."],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TerrainType",
+      "docs": [
+        "Define terrain types that affect movement.",
+        "Note: Make sure to declare the enum as public."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Plain"
+          },
+          {
+            "name": "Mountain"
+          },
+          {
+            "name": "River"
+          }
+        ]
+      }
+    }
+  ]
+}

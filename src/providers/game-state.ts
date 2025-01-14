@@ -11,6 +11,9 @@ const gameStateProvider: Provider = {
     try {
       // TODO: Implement game state provider
       // const gameState = state;
+      console.log("runtime", runtime);
+      console.log("message", message);
+      console.log("state", state);
 
       const gameState = {
         agents: [],

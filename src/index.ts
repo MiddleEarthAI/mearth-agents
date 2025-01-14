@@ -29,6 +29,7 @@ import { battleStateProvider } from "./providers/battle-state.ts";
 import { twitterMetricsProvider } from "./providers/twitter-metrics.ts";
 import { tokenStateProvider } from "./providers/token-state.ts";
 import { gameStateProvider } from "./providers/game-state.ts";
+import { MearthManager } from "./mearthManager.ts";
 // import { battleEvaluator } from "./evaluators/battle-evaluator.ts";
 // import { socialEvaluator } from "./evaluators/social-evaluator.ts";
 // import { tokenEvaluator } from "./evaluators/token-evaluator.ts";
@@ -65,7 +66,7 @@ export function createAgent(
 
   nodePlugin ??= createNodePlugin();
 
-  return new AgentRuntime({
+  const runtime = new AgentRuntime({
     databaseAdapter: db,
     token,
     modelProvider: ModelProviderName.ANTHROPIC,
@@ -87,6 +88,16 @@ export function createAgent(
     managers: [],
     cacheManager: cache,
   });
+
+  // Add MearthManager after runtime is created
+  runtime.registerMemoryManager(
+    new MearthManager({
+      tableName: "mearth_memories",
+      runtime,
+    })
+  );
+
+  return runtime;
 }
 
 // Initializes and starts an agent for a given character

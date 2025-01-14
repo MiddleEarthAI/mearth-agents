@@ -3,11 +3,7 @@
 // import { Agent } from "../types";
 // import { canBattle } from "./battle";
 
-// import {
-//   getTokenBalance,
-//   TokenProvider,
-//   WalletProvider,
-// } from "@elizaos/plugin-solana";
+// import { TokenProvider, WalletProvider } from "@elizaos/plugin-solana";
 
 // export interface AllianceAction {
 //   type: ActionType.ALLIANCE;
@@ -33,6 +29,7 @@
 //   agent1: Agent,
 //   agent2: Agent
 // ): Promise<boolean> => {
+//     runtime.update
 //   // Check if in range and not already allied
 //   if (!canBattle(runtime, agent1, agent2)) return false;
 //   if (agent1.alliances.includes(agent2.id)) return false;
