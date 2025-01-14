@@ -4,3 +4,5 @@ node_modules
 cache
 db.sqlite
 .idea
+characters/*
+!characters/agent1.character.json

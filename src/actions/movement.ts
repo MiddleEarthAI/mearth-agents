@@ -1,6 +1,17 @@
-import { IAgentRuntime, Memory, State } from "@elizaos/core";
+import { HandlerCallback, IAgentRuntime, Memory, State } from "@elizaos/core";
 import { Action, ActionType, TerrainType } from "./types";
-import { Position, Agent } from "../types";
+import { Position, Agent, MearthProgram } from "../types";
+
+async function moveAgent(program: MearthProgram, agent: Agent, to: Position) {
+  const txSignature = await program.methods
+    .moveAgent(to.x, to.y)
+    .accounts({
+      agent: agent.id,
+    })
+    .rpc();
+
+  return txSignature;
+}
 
 export interface MoveAction {
   type: ActionType.MOVE;
@@ -68,7 +79,20 @@ export const moveAction: Action = {
     }
   },
 
-  handler: async (runtime: IAgentRuntime, message: Memory, state?: State) => {
+  handler: async (
+    runtime: IAgentRuntime,
+    message: Memory,
+    state?: State,
+    callback?: HandlerCallback,
+    options?: { [key: string]: unknown }
+  ) => {
+    // composeState
+    if (!state) {
+      state = (await runtime.composeState(message)) as State;
+    } else {
+      state = await runtime.updateRecentMessageState(state);
+    }
+
     try {
       const agent = state?.currentAgent as Agent;
       const currentPos = agent.position;

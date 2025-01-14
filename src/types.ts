@@ -1,3 +1,6 @@
+import { MiddleEarthAiProgram } from "./constants/middle_earth_ai_program";
+import * as anchor from "@coral-xyz/anchor";
+
 export interface Position {
   x: number;
   y: number;
@@ -64,3 +67,5 @@ export interface DieAction {
   agentId: string;
   cause: "BATTLE" | "TERRAIN";
 }
+
+export type MearthProgram = anchor.Program<MiddleEarthAiProgram>;
