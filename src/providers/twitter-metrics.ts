@@ -1,5 +1,4 @@
 import { Provider, IAgentRuntime, Memory, State } from "@elizaos/core";
-import { TwitterMetrics } from "./types";
 
 const twitterMetricsProvider: Provider = {
   get: async (
@@ -8,10 +7,6 @@ const twitterMetricsProvider: Provider = {
     state?: State
   ): Promise<string> => {
     try {
-      // const metrics = state?.twitterMetrics as TwitterMetrics;
-      // if (!metrics) {
-      //   return "No Twitter metrics available";
-      // }
       const metrics = {
         followerCount: Math.random() * 1000,
         impressions: Math.random() * 1000,
@@ -37,12 +32,16 @@ const twitterMetricsProvider: Provider = {
       if (metrics.replies > metrics.retweets) {
         recommendations.push("Engage more with your supporters");
       }
-      // if (metrics.impressions > metrics.followerCount * 5) {
-      //   recommendations.push("Your moves are getting attention - capitalize on it");
-      // }
-      // if (metrics.followerCount > 1000) {
-      //   recommendations.push("You have a strong following - use it to gather more tokens");
-      // }
+      if (metrics.impressions > metrics.followerCount * 5) {
+        recommendations.push(
+          "Your moves are getting attention - capitalize on it"
+        );
+      }
+      if (metrics.followerCount > 1000) {
+        recommendations.push(
+          "You have a strong following - use it to gather more tokens"
+        );
+      }
 
       // Format metrics information
       return `

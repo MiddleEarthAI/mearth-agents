@@ -1,6 +1,13 @@
 import { Provider, IAgentRuntime, Memory, State } from "@elizaos/core";
-import { BattleState, Battle, BattleOutcome } from "./types";
 
+import { getProgram } from "../utils/program";
+import { PublicKey } from "@solana/web3.js";
+import * as anchor from "@coral-xyz/anchor";
+
+/**
+ * Provider for retrieving and managing battle state information
+ * Interfaces with the Middle Earth AI Program to get battle data
+ */
 const battleStateProvider: Provider = {
   get: async (
     runtime: IAgentRuntime,
@@ -8,65 +15,64 @@ const battleStateProvider: Provider = {
     state?: State
   ): Promise<string> => {
     try {
-      // const battleState = state?.battleState as BattleState;
-      // if (!battleState) {
-      //   return "No battle state available";
-      // }
+      // Initialize program connection
+      const program = await getProgram(runtime);
 
-      const agentId = runtime.agentId;
-      const battleState = {
-        activeBattles: [],
-        recentOutcomes: [],
-        lastUpdate: new Date().toISOString(),
-      };
+      // Get agent's public key
+      const agentPubkey = new PublicKey(program.provider.publicKey);
 
-      // Get active battles for this agent
-      const activeBattles = battleState.activeBattles.filter(
-        (battle) => battle.attacker === agentId || battle.defender === agentId
-      );
+      // Fetch agent account data
+      const agentAccount = await program.account.agent.fetch(agentPubkey);
 
-      // Get recent battle outcomes for this agent
-      const recentOutcomes = battleState.recentOutcomes.filter(
-        (outcome) => outcome.winner === agentId || outcome.loser === agentId
-      );
+      // Get game account
+      const gameAccount = await program.account.game.fetch(agentAccount.game);
+
+      state.currentAgentAccount = agentAccount;
+      state.currentGameAccount = gameAccount;
 
       // Format battle information
-      const battleInfo = `
-Battle State Information:
+      //       const battleInfo = `
+      // Battle State Information:
 
-Active Battles (${activeBattles.length}):
-${activeBattles
-  .map(
-    (battle) => `
-- Battle ID: ${battle.id}
-  Attacker: ${battle.attacker}
-  Defender: ${battle.defender}
-  Started: ${new Date(battle.startTime).toLocaleString()}
-  Tokens Burned: ${battle.tokensBurned}
-`
-  )
-  .join("")}
+      // Active Battles (${battleState.activeBattles.length}):
+      // ${battleState.activeBattles
+      //   .map(
+      //     (battle) => `
+      // - Battle ID: ${battle.id}
+      //   Attacker: ${battle.attacker}
+      //   Defender: ${battle.defender}
+      //   Started: ${new Date(battle.startTime).toLocaleString()}
+      //   Tokens at Stake: ${battle.tokensBurned}
+      // `
+      //   )
+      //   .join("")}
 
-Recent Battle Outcomes (${recentOutcomes.length}):
-${recentOutcomes
-  .map(
-    (outcome) => `
-- Battle ID: ${outcome.battleId}
-  Winner: ${outcome.winner}
-  Loser: ${outcome.loser}
-  Tokens Won: ${outcome.tokensWon}
-  Ended: ${new Date(outcome.endTime).toLocaleString()}
-`
-  )
-  .join("")}
+      // Recent Battle Outcomes (${battleState.recentOutcomes.length}):
+      // ${battleState.recentOutcomes
+      //   .map(
+      //     (outcome) => `
+      // - Battle ID: ${outcome.battleId}
+      //   Winner: ${outcome.winner}
+      //   Loser: ${outcome.loser}
+      //   Tokens Transferred: ${outcome.tokensWon}
+      //   Ended: ${new Date(outcome.endTime).toLocaleString()}
+      // `
+      //   )
+      //   .join("")}
 
-Last Updated: ${new Date(battleState.lastUpdate).toLocaleString()}
-      `.trim();
+      // Agent Battle Stats:
+      // - Last Battle: ${agentAccount.lastBattle ? new Date(agentAccount.lastBattle * 1000).toLocaleString() : 'Never'}
+      // - Last Attack: ${agentAccount.lastAttack ? new Date(agentAccount.lastAttack * 1000).toLocaleString() : 'Never'}
+      // - Current Token Balance: ${agentAccount.tokenBalance.toString()}
+      // - Staked Balance: ${agentAccount.stakedBalance.toString()}
 
-      return battleInfo;
+      // Last Updated: ${new Date(battleState.lastUpdate).toLocaleString()}
+      //       `.trim();
+
+      return "battleInfo";
     } catch (error) {
       console.error("Battle state provider error:", error);
-      return "Battle state temporarily unavailable";
+      return "Error retrieving battle state: " + error.message;
     }
   },
 };
