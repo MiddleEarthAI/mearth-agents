@@ -357,11 +357,11 @@ export const moveAction: Action = {
 
       const { newX, newY } = moveResponse;
 
-      const txSignature = await moveAgent(runtime, {
-        from: currentAgentInfo.currentPosition,
-        to: { x: newX, y: newY },
-        terrain: TerrainType.PLAIN,
-      });
+      const txSignature = await moveAgent(
+        { x: newX, y: newY },
+        currentAgentInfo
+      );
+
       console.log("Move transaction signature:", txSignature);
     } catch (error) {
       console.error("Move handler error:", error);
@@ -372,11 +372,11 @@ export const moveAction: Action = {
   examples: [
     [
       {
-        user: "user1",
+        user: "{{user1}}",
         content: { text: "Go north to explore" },
       },
       {
-        user: "agent",
+        user: "{{agent}}",
         content: {
           text: "Moving north to explore the area",
           action: "MOVE",
@@ -385,11 +385,11 @@ export const moveAction: Action = {
     ],
     [
       {
-        user: "user1",
+        user: "{{user1}}",
         content: { text: "Head east towards the nearby agent" },
       },
       {
-        user: "agent",
+        user: "{{agent}}",
         content: {
           text: "Moving east to approach the agent",
           action: "MOVE",

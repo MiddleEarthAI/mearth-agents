@@ -9,16 +9,16 @@ export interface Position {
 export interface AgentInfo {
   game: string; // Pubkey
   authority: string; // Pubkey
-  id: number; // u8
+  id: string;
   currentPosition: Position;
   isAlive: boolean;
   lastMove: Date; // i64 timestamp
   lastBattle: Date; // i64 timestamp
-  currentBattleStart?: number; // Option<i64>
+  currentBattleStart?: Date; //
   allianceWith?: string; // ally agent name
   allianceDate: Date; // i64
   ignoreCooldowns: Array<{
-    agentId: number;
+    agentId: string;
     date: Date;
   }>;
   tokenBalance: number; // u64
