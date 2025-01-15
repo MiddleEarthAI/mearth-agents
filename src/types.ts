@@ -6,66 +6,41 @@ export interface Position {
   y: number;
 }
 
-export interface Agent {
-  id: string;
-  name: string;
-  position: Position;
-  tokens: number;
-  alliances: string[];
-  allianceCooldowns: { [agentId: string]: number };
-  battleCooldowns: { [agentId: string]: number };
-}
-
-export enum ActionType {
-  MOVE = "MOVE",
-  BATTLE = "BATTLE",
-  ALLIANCE = "ALLIANCE",
-  IGNORE = "IGNORE",
-  DIE = "DIE",
+export interface AgentInfo {
+  game: string; // Pubkey
+  authority: string; // Pubkey
+  id: number; // u8
+  currentPosition: Position;
+  isAlive: boolean;
+  lastMove: Date; // i64 timestamp
+  lastBattle: Date; // i64 timestamp
+  currentBattleStart?: number; // Option<i64>
+  allianceWith?: string; // ally agent name
+  allianceDate: Date; // i64
+  ignoreCooldowns: Array<{
+    agentId: number;
+    date: Date;
+  }>;
+  tokenBalance: number; // u64
+  stakedBalance: number; // u64
+  totalShares: number; // u64
+  lastAttack: Date; // i64
+  lastIgnore: Date; // i64
+  lastAlliance: Date; // i64
+  nextMoveTime: Date; // i64
+  lastAllianceAgent?: string; // ally agent name
+  lastAllianceBroken: Date; // i64
 }
 
 export enum TerrainType {
-  PLAINS = "PLAINS",
-  MOUNTAINS = "MOUNTAINS",
+  PLAIN = "PLAIN",
   RIVER = "RIVER",
+  MOUNTAIN = "MOUNTAIN",
 }
 
-export interface MoveAction {
-  type: ActionType.MOVE;
-  agentId: string;
-  from: Position;
-  to: Position;
-  terrain: TerrainType;
-}
-
-export interface BattleAction {
-  type: ActionType.BATTLE;
-  attacker: string;
-  defender: string;
-  attackerWallet: string;
-  defenderWallet: string;
-  tokensBurned: number;
-}
-
-export interface AllianceAction {
-  type: ActionType.ALLIANCE;
-  initiator: string;
-  ally: string;
-  initiatorWallet: string;
-  allyWallet: string;
-}
-
-export interface IgnoreAction {
-  type: ActionType.IGNORE;
-  initiator: string;
-  target: string;
-  cooldownEnd: number;
-}
-
-export interface DieAction {
-  type: ActionType.DIE;
-  agentId: string;
-  cause: "BATTLE" | "TERRAIN";
+export enum DeathCause {
+  BATTLE = "BATTLE",
+  TERRAIN = "TERRAIN",
 }
 
 export type MearthProgram = anchor.Program<MiddleEarthAiProgram>;

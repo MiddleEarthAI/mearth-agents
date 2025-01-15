@@ -8,7 +8,7 @@ import {
 import { Connection, PublicKey } from "@solana/web3.js";
 import BigNumber from "bignumber.js";
 import NodeCache from "node-cache";
-import { getWalletKey } from "../keypairUtils";
+import { getWalletKey } from "../utils/keypairUtils";
 
 // Provider configuration
 const PROVIDER_CONFIG = {
@@ -21,38 +21,6 @@ const PROVIDER_CONFIG = {
   },
 };
 
-export interface Item {
-  name: string;
-  address: string;
-  symbol: string;
-  decimals: number;
-  balance: string;
-  uiAmount: string;
-  priceUsd: string;
-  valueUsd: string;
-  valueSol?: string;
-}
-
-interface WalletPortfolio {
-  totalUsd: string;
-  totalSol?: string;
-  items: Array<Item>;
-}
-
-// interface _BirdEyePriceData {
-//   data: {
-//     [key: string]: {
-//       price: number;
-//       priceChange24h: number;
-//     };
-//   };
-// }
-
-interface Prices {
-  solana: { usd: string };
-  mearth: { usd: string };
-}
-
 export class WalletProvider {
   private cache: NodeCache;
 
@@ -63,324 +31,33 @@ export class WalletProvider {
     this.cache = new NodeCache({ stdTTL: 300 }); // Cache TTL set to 5 minutes
   }
 
-  private async fetchWithRetry(
-    runtime,
-    url: string,
-    options: RequestInit = {}
-  ): Promise<any> {
-    let lastError: Error;
-
-    for (let i = 0; i < PROVIDER_CONFIG.MAX_RETRIES; i++) {
-      try {
-        const response = await fetch(url, {
-          ...options,
-          headers: {
-            Accept: "application/json",
-            "x-chain": "solana",
-            "X-API-KEY": runtime.getSetting("BIRDEYE_API_KEY", "") || "",
-            ...options.headers,
-          },
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(
-            `HTTP error! status: ${response.status}, message: ${errorText}`
-          );
-        }
-
-        const data = await response.json();
-        return data;
-      } catch (error) {
-        elizaLogger.error(`Attempt ${i + 1} failed:`, error);
-        lastError = error;
-        if (i < PROVIDER_CONFIG.MAX_RETRIES - 1) {
-          const delay = PROVIDER_CONFIG.RETRY_DELAY * Math.pow(2, i);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          continue;
-        }
-      }
-    }
-
-    elizaLogger.error(
-      "All attempts failed. Throwing the last error:",
-      lastError
-    );
-    throw lastError;
-  }
-
-  async fetchPortfolioValue(runtime): Promise<WalletPortfolio> {
+  async getFormattedMearthBalance(runtime: IAgentRuntime): Promise<string> {
     try {
-      const cacheKey = `portfolio-${this.walletPublicKey.toBase58()}`;
-      const cachedValue = this.cache.get<WalletPortfolio>(cacheKey);
-
-      if (cachedValue) {
-        elizaLogger.log("Cache hit for fetchPortfolioValue");
-        return cachedValue;
-      }
-      elizaLogger.log("Cache miss for fetchPortfolioValue");
-
-      // Check if Birdeye API key is available
-      const birdeyeApiKey = runtime.getSetting("BIRDEYE_API_KEY");
-
-      if (birdeyeApiKey) {
-        // Existing Birdeye API logic
-        const walletData = await this.fetchWithRetry(
-          runtime,
-          `${
-            PROVIDER_CONFIG.BIRDEYE_API
-          }/v1/wallet/token_list?wallet=${this.walletPublicKey.toBase58()}`
-        );
-
-        if (walletData?.success && walletData?.data) {
-          const data = walletData.data;
-          const totalUsd = new BigNumber(data.totalUsd.toString());
-          const prices = await this.fetchPrices(runtime);
-          const solPriceInUSD = new BigNumber(prices.solana.usd.toString());
-
-          const items = data.items.map((item: any) => ({
-            ...item,
-            valueSol: new BigNumber(item.valueUsd || 0)
-              .div(solPriceInUSD)
-              .toFixed(6),
-            name: item.name || "Unknown",
-            symbol: item.symbol || "Unknown",
-            priceUsd: item.priceUsd || "0",
-            valueUsd: item.valueUsd || "0",
-          }));
-
-          const portfolio = {
-            totalUsd: totalUsd.toString(),
-            totalSol: totalUsd.div(solPriceInUSD).toFixed(6),
-            items: items.sort((a, b) =>
-              new BigNumber(b.valueUsd)
-                .minus(new BigNumber(a.valueUsd))
-                .toNumber()
-            ),
-          };
-
-          this.cache.set(cacheKey, portfolio);
-          return portfolio;
-        }
-      }
-
-      // Fallback to basic token account info if no Birdeye API key or API call fails
       const accounts = await this.getTokenAccounts(
         this.walletPublicKey.toBase58()
       );
 
-      const items = accounts.map((acc) => ({
-        name: "Unknown",
-        address: acc.account.data.parsed.info.mint,
-        symbol: "Unknown",
-        decimals: acc.account.data.parsed.info.tokenAmount.decimals,
-        balance: acc.account.data.parsed.info.tokenAmount.amount,
-        uiAmount: acc.account.data.parsed.info.tokenAmount.uiAmount.toString(),
-        priceUsd: "0",
-        valueUsd: "0",
-        valueSol: "0",
-      }));
+      let totalBalance = new BigNumber(0);
+      let formattedOutput = `Wallet Address: ${this.walletPublicKey.toBase58()}\n\n`;
 
-      const portfolio = {
-        totalUsd: "0",
-        totalSol: "0",
-        items,
-      };
-
-      this.cache.set(cacheKey, portfolio);
-      return portfolio;
-    } catch (error) {
-      elizaLogger.error("Error fetching portfolio:", error);
-      throw error;
-    }
-  }
-
-  async fetchPortfolioValueCodex(runtime): Promise<WalletPortfolio> {
-    try {
-      const cacheKey = `portfolio-${this.walletPublicKey.toBase58()}`;
-      const cachedValue = await this.cache.get<WalletPortfolio>(cacheKey);
-
-      if (cachedValue) {
-        elizaLogger.log("Cache hit for fetchPortfolioValue");
-        return cachedValue;
-      }
-      elizaLogger.log("Cache miss for fetchPortfolioValue");
-
-      const query = `
-              query Balances($walletId: String!, $cursor: String) {
-                balances(input: { walletId: $walletId, cursor: $cursor }) {
-                  cursor
-                  items {
-                    walletId
-                    tokenId
-                    balance
-                    shiftedBalance
-                  }
-                }
-              }
-            `;
-
-      const variables = {
-        walletId: `${this.walletPublicKey.toBase58()}:${1399811149}`,
-        cursor: null,
-      };
-
-      const response = await fetch(PROVIDER_CONFIG.GRAPHQL_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: runtime.getSetting("CODEX_API_KEY", "") || "",
-        },
-        body: JSON.stringify({
-          query,
-          variables,
-        }),
-      }).then((res) => res.json());
-
-      const data = response.data?.data?.balances?.items;
-
-      if (!data || data.length === 0) {
-        elizaLogger.error("No portfolio data available", data);
-        throw new Error("No portfolio data available");
+      if (accounts.length === 0) {
+        return formattedOutput + "No MEARTH tokens found in wallet";
       }
 
-      // Fetch token prices
-      const prices = await this.fetchPrices(runtime);
-      const solPriceInUSD = new BigNumber(prices.solana.usd.toString());
-
-      // Reformat items
-      const items: Item[] = data.map((item: any) => {
-        return {
-          name: "Unknown",
-          address: item.tokenId.split(":")[0],
-          symbol: item.tokenId.split(":")[0],
-          decimals: 6,
-          balance: item.balance,
-          uiAmount: item.shiftedBalance.toString(),
-          priceUsd: "",
-          valueUsd: "",
-          valueSol: "",
-        };
-      });
-
-      // Calculate total portfolio value
-      const totalUsd = items.reduce(
-        (sum, item) => sum.plus(new BigNumber(item.valueUsd)),
-        new BigNumber(0)
-      );
-
-      const totalSol = totalUsd.div(solPriceInUSD);
-
-      const portfolio: WalletPortfolio = {
-        totalUsd: totalUsd.toFixed(6),
-        totalSol: totalSol.toFixed(6),
-        items: items.sort((a, b) =>
-          new BigNumber(b.valueUsd).minus(new BigNumber(a.valueUsd)).toNumber()
-        ),
-      };
-
-      // Cache the portfolio for future requests
-      await this.cache.set(cacheKey, portfolio, 60 * 1000); // Cache for 1 minute
-
-      return portfolio;
-    } catch (error) {
-      elizaLogger.error("Error fetching portfolio:", error);
-      throw error;
-    }
-  }
-
-  async fetchPrices(runtime): Promise<Prices> {
-    try {
-      const cacheKey = "prices";
-      const cachedValue = this.cache.get<Prices>(cacheKey);
-
-      if (cachedValue) {
-        elizaLogger.log("Cache hit for fetchPrices");
-        return cachedValue;
-      }
-      elizaLogger.log("Cache miss for fetchPrices");
-
-      const { SOL, BTC, ETH } = PROVIDER_CONFIG.TOKEN_ADDRESSES;
-      const tokens = [SOL, BTC, ETH];
-      const prices: Prices = {
-        solana: { usd: "0" },
-        bitcoin: { usd: "0" },
-        ethereum: { usd: "0" },
-      };
-
-      for (const token of tokens) {
-        const response = await this.fetchWithRetry(
-          runtime,
-          `${PROVIDER_CONFIG.BIRDEYE_API}/defi/price?address=${token}`,
-          {
-            headers: {
-              "x-chain": "solana",
-            },
-          }
+      for (const account of accounts) {
+        const parsedInfo = account.account.data.parsed.info;
+        const balance = new BigNumber(parsedInfo.tokenAmount.amount).dividedBy(
+          Math.pow(10, parsedInfo.tokenAmount.decimals)
         );
 
-        if (response?.data?.value) {
-          const price = response.data.value.toString();
-          prices[
-            token === SOL ? "solana" : token === BTC ? "bitcoin" : "ethereum"
-          ].usd = price;
-        } else {
-          elizaLogger.warn(`No price data available for token: ${token}`);
-        }
+        totalBalance = totalBalance.plus(balance);
       }
 
-      this.cache.set(cacheKey, prices);
-      return prices;
+      formattedOutput += `MEARTH Balance: ${totalBalance.toFixed(6)} MEARTH\n`;
+      return formattedOutput;
     } catch (error) {
-      elizaLogger.error("Error fetching prices:", error);
-      throw error;
-    }
-  }
-
-  formatPortfolio(runtime, portfolio: WalletPortfolio, prices: Prices): string {
-    let output = `${runtime.character.description}\n`;
-    output += `Wallet Address: ${this.walletPublicKey.toBase58()}\n\n`;
-
-    const totalUsdFormatted = new BigNumber(portfolio.totalUsd).toFixed(2);
-    const totalSolFormatted = portfolio.totalSol;
-
-    output += `Total Value: $${totalUsdFormatted} (${totalSolFormatted} SOL)\n\n`;
-    output += "Token Balances:\n";
-
-    const nonZeroItems = portfolio.items.filter((item) =>
-      new BigNumber(item.uiAmount).isGreaterThan(0)
-    );
-
-    if (nonZeroItems.length === 0) {
-      output += "No tokens found with non-zero balance\n";
-    } else {
-      for (const item of nonZeroItems) {
-        const valueUsd = new BigNumber(item.valueUsd).toFixed(2);
-        output += `${item.name} (${item.symbol}): ${new BigNumber(
-          item.uiAmount
-        ).toFixed(6)} ($${valueUsd} | ${item.valueSol} SOL)\n`;
-      }
-    }
-
-    output += "\nMarket Prices:\n";
-    output += `SOL: $${new BigNumber(prices.solana.usd).toFixed(2)}\n`;
-    output += `BTC: $${new BigNumber(prices.bitcoin.usd).toFixed(2)}\n`;
-    output += `ETH: $${new BigNumber(prices.ethereum.usd).toFixed(2)}\n`;
-
-    return output;
-  }
-
-  async getFormattedPortfolio(runtime): Promise<string> {
-    try {
-      const [portfolio, prices] = await Promise.all([
-        this.fetchPortfolioValue(runtime),
-        this.fetchPrices(runtime),
-      ]);
-
-      return this.formatPortfolio(runtime, portfolio, prices);
-    } catch (error) {
-      elizaLogger.error("Error generating portfolio report:", error);
-      return "Unable to fetch wallet information. Please try again later.";
+      elizaLogger.error("Error formatting MEARTH balance:", error);
+      return "Unable to fetch MEARTH balance. Please try again later.";
     }
   }
 
@@ -389,9 +66,7 @@ export class WalletProvider {
       const accounts = await this.connection.getParsedTokenAccountsByOwner(
         new PublicKey(walletAddress),
         {
-          programId: new PublicKey(
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-          ),
+          programId: new PublicKey(PROVIDER_CONFIG.TOKEN_ADDRESSES.MEARTH),
         }
       );
       return accounts.value;
@@ -417,7 +92,7 @@ const walletProvider: Provider = {
 
       const provider = new WalletProvider(connection, publicKey);
 
-      return await provider.getFormattedPortfolio(runtime);
+      return await provider.getFormattedMearthBalance(runtime);
     } catch (error) {
       elizaLogger.error("Error in wallet provider:", error);
       return null;
