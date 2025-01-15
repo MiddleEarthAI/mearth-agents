@@ -1,7 +1,7 @@
 {
-  "name": "Purrlock Paws",
+  "name": "PurrlockPaws",
   "plugins": [],
-  "clients": ["telegram", "twitter"],
+  "clients": ["twitter"],
   "modelProvider": "anthropic",
   "settings": {
     "secrets": {},
