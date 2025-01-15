@@ -27,7 +27,6 @@ import {
 import { initializeDatabase } from "./database/index.ts";
 import { battleStateProvider } from "./providers/battle-state.ts";
 import { twitterMetricsProvider } from "./providers/twitter-metrics.ts";
-import { tokenStateProvider } from "./providers/token-state.ts";
 import { gameStateProvider } from "./providers/game-state.ts";
 import { MearthManager } from "./mearthManager.ts";
 // import { battleEvaluator } from "./evaluators/battle-evaluator.ts";
@@ -77,12 +76,7 @@ export function createAgent(
       nodePlugin,
       // character.settings?.secrets?.WALLET_PUBLIC_KEY ? solanaPlugin : null,
     ].filter(Boolean),
-    providers: [
-      battleStateProvider,
-      gameStateProvider,
-      twitterMetricsProvider,
-      tokenStateProvider,
-    ],
+    providers: [battleStateProvider, gameStateProvider, twitterMetricsProvider],
     actions: [],
     services: [],
     managers: [],
@@ -92,7 +86,7 @@ export function createAgent(
   // Add MearthManager after runtime is created
   runtime.registerMemoryManager(
     new MearthManager({
-      tableName: "mearth_memories",
+      tableName: "mearth",
       runtime,
     })
   );
@@ -108,6 +102,7 @@ async function startAgent(character: Character, directClient: DirectClient) {
     character.username ??= character.name;
 
     const token = getTokenForProvider(ModelProviderName.ANTHROPIC, character);
+
     const dataDir = path.join(__dirname, "../data");
 
     // Create data directory if it doesn't exist
