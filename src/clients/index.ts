@@ -1,5 +1,6 @@
 import { AutoClientInterface } from "@elizaos/client-auto";
 import { TwitterClientInterface } from "@elizaos/client-twitter";
+import { TelegramClientInterface } from "@elizaos/client-telegram";
 import { Character, IAgentRuntime } from "@elizaos/core";
 
 export async function initializeClients(
@@ -8,6 +9,11 @@ export async function initializeClients(
 ) {
   const clients = [];
   const clientTypes = character.clients?.map((str) => str.toLowerCase()) || [];
+
+  if (clientTypes.includes("telegram")) {
+    const telegramClient = await TelegramClientInterface.start(runtime);
+    if (telegramClient) clients.push(telegramClient);
+  }
 
   if (clientTypes.includes("auto")) {
     const autoClient = await AutoClientInterface.start(runtime);

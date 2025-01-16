@@ -25,17 +25,12 @@ import {
   parseArguments,
 } from "./config/index.ts";
 import { initializeDatabase } from "./database/index.ts";
-import { battleStateProvider } from "./providers/battle-state.ts";
-import { twitterMetricsProvider } from "./providers/twitter-metrics.ts";
-import { gameStateProvider } from "./providers/game-state.ts";
+import {
+  battleStateProvider,
+  gameMechanicsProvider,
+  gameStateProvider,
+} from "./providers/index.ts";
 import { MearthManager } from "./mearthManager.ts";
-// import { battleEvaluator } from "./evaluators/battle-evaluator.ts";
-// import { socialEvaluator } from "./evaluators/social-evaluator.ts";
-// import { tokenEvaluator } from "./evaluators/token-evaluator.ts";
-// import { BattleStateProvider } from "./providers/battle-state.ts";
-// import { GameStateProvider } from "./providers/game-state.ts";
-// import { TwitterMetricsProvider } from "./providers/twitter-metrics.ts";
-// import { TokenStateProvider } from "./providers/token-state.ts";
 
 // Get the current file's directory path
 const __filename = fileURLToPath(import.meta.url);
@@ -76,7 +71,7 @@ export function createAgent(
       nodePlugin,
       // character.settings?.secrets?.WALLET_PUBLIC_KEY ? solanaPlugin : null,
     ].filter(Boolean),
-    providers: [battleStateProvider, gameStateProvider, twitterMetricsProvider],
+    providers: [battleStateProvider, gameStateProvider, gameMechanicsProvider],
     actions: [],
     services: [],
     managers: [],
