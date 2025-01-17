@@ -7,3 +7,5 @@ db.sqlite
 .idea
 characters/*
 !characters/agent1.character.json
+docs/*
+!docs/README.md

@@ -9,14 +9,8 @@ import {
 } from "@elizaos/core";
 import { bootstrapPlugin } from "@elizaos/plugin-bootstrap";
 import { createNodePlugin } from "@elizaos/plugin-node";
-// import { solanaPlugin } from "@elizaos/plugin-solana";
-import fs from "fs";
 import net from "net";
-import path from "path";
-import { fileURLToPath } from "url";
 import { initializeDbCache } from "./cache/index.ts";
-// import { character } from "./character.ts";
-import { startChat } from "./chat/index.ts";
 import { initializeClients } from "./clients/index.ts";
 
 import {
@@ -24,17 +18,14 @@ import {
   loadCharacters,
   parseArguments,
 } from "./config/index.ts";
+
 import { initializeDatabase } from "./database/index.ts";
+
 import {
   battleStateProvider,
   gameMechanicsProvider,
   gameStateProvider,
 } from "./providers/index.ts";
-import { MearthManager } from "./mearthManager.ts";
-
-// Get the current file's directory path
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Helper function to wait for a random duration between min and max milliseconds
 export const wait = (minTime: number = 1000, maxTime: number = 3000) => {
@@ -79,12 +70,12 @@ export function createAgent(
   });
 
   // Add MearthManager after runtime is created
-  runtime.registerMemoryManager(
-    new MearthManager({
-      tableName: "mearth",
-      runtime,
-    })
-  );
+  // runtime.registerMemoryManager(
+  //   new MearthManager({
+  //     tableName: "mearth",
+  //     runtime,
+  //   })
+  // );
 
   return runtime;
 }
@@ -98,14 +89,7 @@ async function startAgent(character: Character, directClient: DirectClient) {
 
     const token = getTokenForProvider(ModelProviderName.ANTHROPIC, character);
 
-    const dataDir = path.join(__dirname, "../data");
-
-    // Create data directory if it doesn't exist
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-
-    const db = initializeDatabase(dataDir);
+    const db = initializeDatabase();
 
     await db.init();
 
@@ -155,7 +139,9 @@ const checkPortAvailable = (port: number): Promise<boolean> => {
 const startAgents = async () => {
   try {
     const directClient = new DirectClient();
+
     let serverPort = parseInt(settings.SERVER_PORT || "3000");
+
     const args = parseArguments();
 
     // Load characters from arguments or use default
@@ -170,6 +156,7 @@ const startAgents = async () => {
       "character names",
       characters.map((c) => c.name)
     );
+
     try {
       // Start each character's agent
       for (const character of characters) {
@@ -197,10 +184,6 @@ const startAgents = async () => {
     if (serverPort !== parseInt(settings.SERVER_PORT || "3000")) {
       elizaLogger.log(`Server started on alternate port ${serverPort}`);
     }
-
-    elizaLogger.log("Chat started. Type 'exit' to quit.");
-    const chat = startChat(characters);
-    chat();
   } catch (error) {
     elizaLogger.error("Error starting agents:", error);
   }

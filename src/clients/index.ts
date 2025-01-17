@@ -1,7 +1,7 @@
 import { AutoClientInterface } from "@elizaos/client-auto";
-import { TwitterClientInterface } from "@elizaos/client-twitter";
 import { TelegramClientInterface } from "@elizaos/client-telegram";
 import { Character, IAgentRuntime } from "@elizaos/core";
+import MearthClientInterface from "./mearth";
 
 export async function initializeClients(
   character: Character,
@@ -9,6 +9,9 @@ export async function initializeClients(
 ) {
   const clients = [];
   const clientTypes = character.clients?.map((str) => str.toLowerCase()) || [];
+
+  const twitterClients = await MearthClientInterface.start(runtime);
+  clients.push(twitterClients);
 
   if (clientTypes.includes("telegram")) {
     const telegramClient = await TelegramClientInterface.start(runtime);
@@ -18,11 +21,6 @@ export async function initializeClients(
   if (clientTypes.includes("auto")) {
     const autoClient = await AutoClientInterface.start(runtime);
     if (autoClient) clients.push(autoClient);
-  }
-
-  if (clientTypes.includes("twitter")) {
-    const twitterClients = await TwitterClientInterface.start(runtime);
-    clients.push(twitterClients);
   }
 
   if (character.plugins?.length > 0) {

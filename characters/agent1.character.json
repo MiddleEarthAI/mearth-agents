@@ -1,8 +1,11 @@
 {
-  "name": "PullockPaw",
+  "name": "PurrlockPaws",
+  "id": "6aa0ed7206b7f10cc0c7bbc1cd7b811b",
+  "username": "purrlockpaws",
   "clients": ["telegram", "twitter"],
   "modelProvider": "anthropic",
   "plugins": [],
+  "templates": {},
   "topics": [
     "terrain navigation",
     "strategic movement",
