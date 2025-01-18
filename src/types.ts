@@ -43,4 +43,44 @@ export enum DeathCause {
   TERRAIN = "TERRAIN",
 }
 
+export type MearthActionResponse = {
+  // Movement actions
+  move?: {
+    direction: string;
+    speed: number;
+  };
+
+  // Battle actions
+  battle?: {
+    targetAgent: string;
+    probability: number;
+    tokensAtRisk: number;
+  };
+
+  // Alliance actions
+  alliance?: {
+    targetAgent: string;
+    duration: number;
+  };
+
+  // Ignore actions
+  ignore?: {
+    targetAgent: string;
+    cooldownHours: number;
+  };
+
+  // Death events
+  death?: {
+    cause: "BATTLE" | "TERRAIN";
+    killerAgent?: string;
+    tokensLost: number;
+  };
+
+  // Strategy actions
+  strategy?: {
+    isDeceptive: boolean;
+    targetCommunity?: string;
+    message: string;
+  };
+};
 export type MearthProgram = anchor.Program<MiddleEarthAiProgram>;

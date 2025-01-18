@@ -1,7 +1,7 @@
 import { AutoClientInterface } from "@elizaos/client-auto";
 import { TelegramClientInterface } from "@elizaos/client-telegram";
 import { Character, IAgentRuntime } from "@elizaos/core";
-import MearthClientInterface from "./twitter";
+import MearthClientInterface from "./mearth";
 
 export async function initializeClients(
   character: Character,
