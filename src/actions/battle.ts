@@ -1,8 +1,8 @@
 import { Action, Memory, State, Content, HandlerCallback } from "@elizaos/core";
-import { AgentInfo } from "../types";
+import { AgentInfo, MearthProgram } from "../types";
 import { BATTLE_COOLDOWN } from "../constants";
 import { Program } from "@coral-xyz/anchor";
-import { MiddleEarthAiProgram } from "../types/middle_earth_ai_program";
+import { getProgram } from "../utils/program";
 
 export interface BattleContent extends Content {
   text: string;
@@ -72,28 +72,28 @@ export const BATTLE_ACTION: Action = {
       }
 
       // Get the Anchor program
-      const program = (runtime as any)
-        .anchorProgram as Program<MiddleEarthAiProgram>;
+      const program = await getProgram(runtime);
+
       if (!program) {
         throw new Error("Anchor program not found");
       }
 
-      const tx = await program.methods
-        .initiateBattle()
-        .accounts({
-          initiator: memory.agentId,
-          target: targetAgentId,
-          game: state.game,
-          authority: state.authority,
-        })
-        .rpc();
+      // const tx = await program.methods
+      //   .initiateBattle()
+      //   .accounts({
+      //     initiator: memory.agentId,
+      //     target: targetAgentId,
+      //     game: state.game,
+      //     authority: state.authority,
+      //   })
+      //   .rpc();
 
-      await callback(
-        {
-          text: `Battle initiated with ${targetAgentId}. Transaction: ${tx}`,
-        },
-        []
-      );
+      // await callback(
+      //   {
+      //     text: `Battle initiated with ${targetAgentId}. Transaction: ${tx}`,
+      //   },
+      //   []
+      // );
     } catch (error) {
       throw new Error(`Failed to initiate battle: ${error.message}`);
     }

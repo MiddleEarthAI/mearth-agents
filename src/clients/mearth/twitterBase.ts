@@ -11,6 +11,7 @@ import { Scraper, Tweet } from "agent-twitter-client";
 import { EventEmitter } from "events";
 
 import { TwitterConfig } from "./environment";
+import { TwitterProfile } from "../../types";
 
 export function extractAnswer(text: string): string {
   const startIndex = text.indexOf("Answer: ") + 8;
@@ -18,15 +19,7 @@ export function extractAnswer(text: string): string {
   return text.slice(startIndex, endIndex);
 }
 
-type TwitterProfile = {
-  id: string;
-  username: string;
-  screenName: string;
-  bio: string;
-  nicknames: string[];
-};
-
-export class TwitterClientBase extends EventEmitter {
+export class TwitterClient extends EventEmitter {
   static _twitterClients: { [accountIdentifier: string]: Scraper } = {};
   twitterClient: Scraper;
   runtime: IAgentRuntime;
@@ -61,7 +54,7 @@ export class TwitterClientBase extends EventEmitter {
     }
   }
 
-  callback: (self: TwitterClientBase) => any = null;
+  callback: (self: TwitterClient) => any = null;
 
   onReady() {
     throw new Error("Not implemented in base class, please call from subclass");
@@ -73,11 +66,11 @@ export class TwitterClientBase extends EventEmitter {
     this.twitterConfig = twitterConfig;
     const username = twitterConfig.TWITTER_USERNAME as string;
 
-    if (TwitterClientBase._twitterClients[username]) {
-      this.twitterClient = TwitterClientBase._twitterClients[username];
+    if (TwitterClient._twitterClients[username]) {
+      this.twitterClient = TwitterClient._twitterClients[username];
     } else {
       this.twitterClient = new Scraper();
-      TwitterClientBase._twitterClients[username] = this.twitterClient;
+      TwitterClient._twitterClients[username] = this.twitterClient;
     }
 
     this.directions =
@@ -247,11 +240,7 @@ export class TwitterClientBase extends EventEmitter {
 
     const agentUsername = this.twitterConfig.TWITTER_USERNAME;
 
-    const homeTimeline =
-      this.twitterConfig.ACTION_TIMELINE_TYPE === "Following"
-        ? await this.twitterClient.fetchFollowingTimeline(count, [])
-        : await this.twitterClient.fetchHomeTimeline(count, []);
-
+    const homeTimeline = [];
     return homeTimeline
       .map((tweet) => ({
         id: tweet.rest_id,
@@ -396,5 +385,9 @@ export class TwitterClientBase extends EventEmitter {
       console.error("Error fetching Twitter profile:", error);
       throw error;
     }
+  }
+
+  async postTweet(text: string) {
+    await this.postTweet(text);
   }
 }

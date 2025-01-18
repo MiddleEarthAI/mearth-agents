@@ -1,10 +1,7 @@
 import { parseBooleanFromText, IAgentRuntime } from "@elizaos/core";
 import { z, ZodError } from "zod";
-import { MearthConfig } from "./types";
-enum ActionTimelineType {
-  Following = "Following",
-  ForYou = "ForYou",
-}
+import { MearthConfig } from "../../types";
+
 export const DEFAULT_MAX_TWEET_LENGTH = 280;
 
 const twitterUsernameSchema = z
@@ -37,44 +34,10 @@ export const twitterEnvSchema = z.object({
   TWITTER_RETRY_LIMIT: z.number().int(),
   TWITTER_POLL_INTERVAL: z.number().int(),
   TWITTER_TARGET_USERS: z.array(twitterUsernameSchema).default([]),
-  // I guess it's possible to do the transformation with zod
-  // not sure it's preferable, maybe a readability issue
-  // since more people will know js/ts than zod
-  /*
-        z
-        .string()
-        .transform((val) => val.trim())
-        .pipe(
-            z.string()
-                .transform((val) =>
-                    val ? val.split(',').map((u) => u.trim()).filter(Boolean) : []
-                )
-                .pipe(
-                    z.array(
-                        z.string()
-                            .min(1)
-                            .max(15)
-                            .regex(
-                                /^[A-Za-z][A-Za-z0-9_]*[A-Za-z0-9]$|^[A-Za-z]$/,
-                                'Invalid Twitter username format'
-                            )
-                    )
-                )
-                .transform((users) => users.join(','))
-        )
-        .optional()
-        .default(''),
-    */
   POST_INTERVAL_MIN: z.number().int(),
   POST_INTERVAL_MAX: z.number().int(),
-  ENABLE_ACTION_PROCESSING: z.boolean(),
   ACTION_INTERVAL: z.number().int(),
   POST_IMMEDIATELY: z.boolean(),
-  TWITTER_SPACES_ENABLE: z.boolean().default(false),
-  MAX_ACTIONS_PROCESSING: z.number().int(),
-  ACTION_TIMELINE_TYPE: z
-    .nativeEnum(ActionTimelineType)
-    .default(ActionTimelineType.ForYou),
 });
 
 export type TwitterConfig = z.infer<typeof twitterEnvSchema>;
@@ -101,16 +64,6 @@ function safeParseInt(
   const parsed = parseInt(value, 10);
   return isNaN(parsed) ? defaultValue : Math.max(1, parsed);
 }
-
-/**
- * Validates or constructs a TwitterConfig object using zod,
- * taking values from the IAgentRuntime or process.env as needed.
- */
-// This also is organized to serve as a point of documentation for the client
-// most of the inputs from the framework (env/character)
-
-// we also do a lot of typing/parsing here
-// so we can do it once and only once per character
 export async function validateTwitterConfig(
   runtime: IAgentRuntime
 ): Promise<TwitterConfig> {

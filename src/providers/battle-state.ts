@@ -31,7 +31,7 @@ const battleStateProvider: Provider = {
         lastAttack: Date.now() / 1000 - 7200, // 2 hours ago
         tokenBalance: "2500", // Governance tokens held
         stakedBalance: "1200", // Tokens staked by supporters
-        currentPosition: { x: 45, y: 60 } as Position,
+        currentPosition: "45,60",
         movementSpeed: 1.2, // Base speed units per hour
         battleRange: 2, // Units range for battle engagement
         allianceTimeout: 18, // Hours before new alliance possible
@@ -176,8 +176,8 @@ Agent Battle Stats:
       } 
 - Current Token Balance: ${mockAgentAccount.tokenBalance}
 - Staked Balance: ${mockAgentAccount.stakedBalance}
-- Current Position: (${mockAgentAccount.currentPosition.x}, ${
-        mockAgentAccount.currentPosition.y
+- Current Position: (${mockAgentAccount.currentPosition.split(",")[0]}, ${
+        mockAgentAccount.currentPosition.split(",")[1]
       })
 - Movement Speed: ${mockAgentAccount.movementSpeed} units/hour
 - Current Terrain: ${mockAgentAccount.currentTerrain}

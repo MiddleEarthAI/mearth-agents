@@ -26,6 +26,8 @@ import {
   gameMechanicsProvider,
   gameStateProvider,
 } from "./providers/index.ts";
+import { moveAction } from "./actions/movement.ts";
+import { MearthManager } from "./mearthManager.ts";
 
 // Helper function to wait for a random duration between min and max milliseconds
 export const wait = (minTime: number = 1000, maxTime: number = 3000) => {
@@ -63,19 +65,19 @@ export function createAgent(
       // character.settings?.secrets?.WALLET_PUBLIC_KEY ? solanaPlugin : null,
     ].filter(Boolean),
     providers: [battleStateProvider, gameStateProvider, gameMechanicsProvider],
-    actions: [],
+    actions: [moveAction],
     services: [],
     managers: [],
     cacheManager: cache,
   });
 
   // Add MearthManager after runtime is created
-  // runtime.registerMemoryManager(
-  //   new MearthManager({
-  //     tableName: "mearth",
-  //     runtime,
-  //   })
-  // );
+  runtime.registerMemoryManager(
+    new MearthManager({
+      tableName: "mearth",
+      runtime,
+    })
+  );
 
   return runtime;
 }

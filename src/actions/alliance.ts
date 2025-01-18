@@ -10,7 +10,7 @@ import { AgentInfo } from "../types";
 import { calculateDistance } from "./movement";
 import { TokenProvider } from "@elizaos/plugin-solana";
 import { PublicKey } from "@solana/web3.js";
-import { walletProvider } from "../providers/wallet";
+import { WalletProvider } from "../providers/wallet";
 
 // Constants
 const ALLIANCE_COOLDOWN = 24 * 60 * 60 * 1000; // 24 hours
@@ -58,7 +58,6 @@ const canFormAlliance = async (
 
   // Get providers
   const providers = runtime.providers;
-  const walletInfo = await walletProvider.get(runtime, null, null);
 
   return false;
 };
