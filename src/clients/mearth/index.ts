@@ -1,75 +1,67 @@
 import { Client, elizaLogger, IAgentRuntime } from "@elizaos/core";
-import { ClientBase } from "./base";
-import { validateTwitterConfig, TwitterConfig } from "./environment";
-import { TwitterInteractionClient } from "./interactions";
+import { TwitterClientBase } from "./twitterBase";
+import {
+  validateTwitterConfig,
+  TwitterConfig,
+  validateMearthConfig,
+} from "./environment";
+// import { TwitterInteractionClient } from "./interactions";
 import { TwitterPostClient } from "./post";
-import { TwitterSearchClient } from "./search";
+import { MearthAutoClient } from "./mearth";
+import { MearthConfig } from "./types";
 
-/**
- * A manager that orchestrates all specialized Twitter logic:
- * - client: base operations (login, timeline caching, etc.)
- * - post: autonomous posting logic
- * - search: searching tweets / replying logic
- * - interaction: handling mentions, replies
- * - space: launching and managing Twitter Spaces (optional)
- */
 class MearthManager {
-  client: ClientBase;
+  twitterClientBase: TwitterClientBase;
   post: TwitterPostClient;
-  search: TwitterSearchClient;
-  interaction: TwitterInteractionClient;
+  // interaction: TwitterInteractionClient;
+  auto: MearthAutoClient;
 
-  constructor(runtime: IAgentRuntime, twitterConfig: TwitterConfig) {
-    // Pass twitterConfig to the base client
-    this.client = new ClientBase(runtime, twitterConfig);
+  constructor(
+    runtime: IAgentRuntime,
+    twitterConfig: TwitterConfig,
+    mearthConfig: MearthConfig
+  ) {
+    // Pass twitterConfig to the base twitterClientBase
+    this.twitterClientBase = new TwitterClientBase(runtime, twitterConfig);
 
     // Posting logic
-    this.post = new TwitterPostClient(this.client, runtime);
-
-    // Optional search logic (enabled if TWITTER_SEARCH_ENABLE is true)
-    if (twitterConfig.TWITTER_SEARCH_ENABLE) {
-      elizaLogger.warn("Twitter/X client running in a mode that:");
-      elizaLogger.warn("1. violates consent of random users");
-      elizaLogger.warn("2. burns your rate limit");
-      elizaLogger.warn("3. can get your account banned");
-      elizaLogger.warn("use at your own risk");
-      this.search = new TwitterSearchClient(this.client, runtime);
-    }
+    this.post = new TwitterPostClient(this.twitterClientBase, runtime);
 
     // Mentions and interactions
-    this.interaction = new TwitterInteractionClient(this.client, runtime);
+    // this.interaction = new TwitterInteractionClient(
+    //   this.twitterClientBase,
+    //   runtime
+    // );
 
-    // Optional Spaces logic (enabled if TWITTER_SPACES_ENABLE is true)
+    // Autonomous agent behavior
+    this.auto = new MearthAutoClient(
+      runtime,
+      this.post,
+      this.twitterClientBase
+    );
   }
 }
 
 export const MearthClientInterface: Client = {
   async start(runtime: IAgentRuntime) {
     const twitterConfig: TwitterConfig = await validateTwitterConfig(runtime);
+    const mearthConfig: MearthConfig = await validateMearthConfig(runtime);
 
-    elizaLogger.log("Twitter client started");
-
-    const manager = new MearthManager(runtime, twitterConfig);
+    const manager = new MearthManager(runtime, twitterConfig, mearthConfig);
 
     // Initialize login/session
-    await manager.client.init();
+    await manager.twitterClientBase.init();
 
-    // Start the posting loop
-    await manager.post.start();
-
-    // Start the search logic if it exists
-    if (manager.search) {
-      await manager.search.start();
-    }
+    await manager.auto.start();
 
     // Start interactions (mentions, replies)
-    await manager.interaction.start();
+    // await manager.interaction.start();
 
     return manager;
   },
 
   async stop(_runtime: IAgentRuntime) {
-    elizaLogger.warn("Twitter client does not support stopping yet");
+    elizaLogger.warn("Twitter twitterClientBase does not support stopping yet");
   },
 };
 

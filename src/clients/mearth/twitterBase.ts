@@ -1,21 +1,15 @@
 import {
-  Content,
   IAgentRuntime,
-  IImageDescriptionService,
   Memory,
   State,
-  UUID,
   getEmbeddingZeroVector,
   elizaLogger,
-  stringToUuid,
 } from "@elizaos/core";
-import {
-  QueryTweetsResponse,
-  Scraper,
-  SearchMode,
-  Tweet,
-} from "agent-twitter-client";
+
+import { Scraper, Tweet } from "agent-twitter-client";
+
 import { EventEmitter } from "events";
+
 import { TwitterConfig } from "./environment";
 
 export function extractAnswer(text: string): string {
@@ -32,68 +26,14 @@ type TwitterProfile = {
   nicknames: string[];
 };
 
-class RequestQueue {
-  private queue: (() => Promise<any>)[] = [];
-  private processing: boolean = false;
-
-  async add<T>(request: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this.queue.push(async () => {
-        try {
-          const result = await request();
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
-      });
-      this.processQueue();
-    });
-  }
-
-  private async processQueue(): Promise<void> {
-    if (this.processing || this.queue.length === 0) {
-      return;
-    }
-    this.processing = true;
-
-    while (this.queue.length > 0) {
-      const request = this.queue.shift()!;
-      try {
-        await request();
-      } catch (error) {
-        console.error("Error processing request:", error);
-        this.queue.unshift(request);
-        await this.exponentialBackoff(this.queue.length);
-      }
-      await this.randomDelay();
-    }
-
-    this.processing = false;
-  }
-
-  private async exponentialBackoff(retryCount: number): Promise<void> {
-    const delay = Math.pow(2, retryCount) * 1000;
-    await new Promise((resolve) => setTimeout(resolve, delay));
-  }
-
-  private async randomDelay(): Promise<void> {
-    const delay = Math.floor(Math.random() * 2000) + 1500;
-    await new Promise((resolve) => setTimeout(resolve, delay));
-  }
-}
-
-export class ClientBase extends EventEmitter {
+export class TwitterClientBase extends EventEmitter {
   static _twitterClients: { [accountIdentifier: string]: Scraper } = {};
   twitterClient: Scraper;
   runtime: IAgentRuntime;
   twitterConfig: TwitterConfig;
   directions: string;
   lastCheckedTweetId: bigint | null = null;
-  imageDescriptionService: IImageDescriptionService;
   temperature: number = 0.5;
-
-  requestQueue: RequestQueue = new RequestQueue();
-
   profile: TwitterProfile | null;
 
   async cacheTweet(tweet: Tweet): Promise<void> {
@@ -119,16 +59,9 @@ export class ClientBase extends EventEmitter {
     if (cachedTweet) {
       return cachedTweet;
     }
-
-    const tweet = await this.requestQueue.add(() =>
-      this.twitterClient.getTweet(tweetId)
-    );
-
-    await this.cacheTweet(tweet);
-    return tweet;
   }
 
-  callback: (self: ClientBase) => any = null;
+  callback: (self: TwitterClientBase) => any = null;
 
   onReady() {
     throw new Error("Not implemented in base class, please call from subclass");
@@ -139,11 +72,12 @@ export class ClientBase extends EventEmitter {
     this.runtime = runtime;
     this.twitterConfig = twitterConfig;
     const username = twitterConfig.TWITTER_USERNAME as string;
-    if (ClientBase._twitterClients[username]) {
-      this.twitterClient = ClientBase._twitterClients[username];
+
+    if (TwitterClientBase._twitterClients[username]) {
+      this.twitterClient = TwitterClientBase._twitterClients[username];
     } else {
       this.twitterClient = new Scraper();
-      ClientBase._twitterClients[username] = this.twitterClient;
+      TwitterClientBase._twitterClients[username] = this.twitterClient;
     }
 
     this.directions =
@@ -234,7 +168,6 @@ export class ClientBase extends EventEmitter {
     }
 
     await this.loadLatestCheckedTweetId();
-    await this.populateTimeline();
   }
 
   async fetchOwnPosts(count: number): Promise<Tweet[]> {
@@ -354,275 +287,6 @@ export class ClientBase extends EventEmitter {
     // Related issue: https://github.com/elizaos/agent-twitter-client/issues/43
   }
 
-  async fetchSearchTweets(
-    query: string,
-    maxTweets: number,
-    searchMode: SearchMode,
-    cursor?: string
-  ): Promise<QueryTweetsResponse> {
-    try {
-      // Sometimes this fails because we are rate limited. in this case, we just need to return an empty array
-      // if we dont get a response in 5 seconds, something is wrong
-      const timeoutPromise = new Promise((resolve) =>
-        setTimeout(() => resolve({ tweets: [] }), 15000)
-      );
-
-      try {
-        const result = await this.requestQueue.add(
-          async () =>
-            await Promise.race([
-              this.twitterClient.fetchSearchTweets(
-                query,
-                maxTweets,
-                searchMode,
-                cursor
-              ),
-              timeoutPromise,
-            ])
-        );
-        return (result ?? { tweets: [] }) as QueryTweetsResponse;
-      } catch (error) {
-        elizaLogger.error("Error fetching search tweets:", error);
-        return { tweets: [] };
-      }
-    } catch (error) {
-      elizaLogger.error("Error fetching search tweets:", error);
-      return { tweets: [] };
-    }
-  }
-
-  private async populateTimeline() {
-    elizaLogger.debug("populating timeline...");
-
-    const cachedTimeline = await this.getCachedTimeline();
-
-    // Check if the cache file exists
-    if (cachedTimeline) {
-      // Read the cached search results from the file
-
-      // Get the existing memories from the database
-      const existingMemories =
-        await this.runtime.messageManager.getMemoriesByRoomIds({
-          roomIds: cachedTimeline.map((tweet) =>
-            stringToUuid(tweet.conversationId + "-" + this.runtime.agentId)
-          ),
-        });
-
-      //TODO: load tweets not in cache?
-
-      // Create a Set to store the IDs of existing memories
-      const existingMemoryIds = new Set(
-        existingMemories.map((memory) => memory.id.toString())
-      );
-
-      // Check if any of the cached tweets exist in the existing memories
-      const someCachedTweetsExist = cachedTimeline.some((tweet) =>
-        existingMemoryIds.has(
-          stringToUuid(tweet.id + "-" + this.runtime.agentId)
-        )
-      );
-
-      if (someCachedTweetsExist) {
-        // Filter out the cached tweets that already exist in the database
-        const tweetsToSave = cachedTimeline.filter(
-          (tweet) =>
-            !existingMemoryIds.has(
-              stringToUuid(tweet.id + "-" + this.runtime.agentId)
-            )
-        );
-
-        console.log({
-          processingTweets: tweetsToSave.map((tweet) => tweet.id).join(","),
-        });
-
-        // Save the missing tweets as memories
-        for (const tweet of tweetsToSave) {
-          elizaLogger.log("Saving Tweet", tweet.id);
-
-          const roomId = stringToUuid(
-            tweet.conversationId + "-" + this.runtime.agentId
-          );
-
-          const userId =
-            tweet.userId === this.profile.id
-              ? this.runtime.agentId
-              : stringToUuid(tweet.userId);
-
-          if (tweet.userId === this.profile.id) {
-            await this.runtime.ensureConnection(
-              this.runtime.agentId,
-              roomId,
-              this.profile.username,
-              this.profile.screenName,
-              "twitter"
-            );
-          } else {
-            await this.runtime.ensureConnection(
-              userId,
-              roomId,
-              tweet.username,
-              tweet.name,
-              "twitter"
-            );
-          }
-
-          const content = {
-            text: tweet.text,
-            url: tweet.permanentUrl,
-            source: "twitter",
-            inReplyTo: tweet.inReplyToStatusId
-              ? stringToUuid(
-                  tweet.inReplyToStatusId + "-" + this.runtime.agentId
-                )
-              : undefined,
-          } as Content;
-
-          elizaLogger.log("Creating memory for tweet", tweet.id);
-
-          // check if it already exists
-          const memory = await this.runtime.messageManager.getMemoryById(
-            stringToUuid(tweet.id + "-" + this.runtime.agentId)
-          );
-
-          if (memory) {
-            elizaLogger.log(
-              "Memory already exists, skipping timeline population"
-            );
-            break;
-          }
-
-          await this.runtime.messageManager.createMemory({
-            id: stringToUuid(tweet.id + "-" + this.runtime.agentId),
-            userId,
-            content: content,
-            agentId: this.runtime.agentId,
-            roomId,
-            embedding: getEmbeddingZeroVector(),
-            createdAt: tweet.timestamp * 1000,
-          });
-
-          await this.cacheTweet(tweet);
-        }
-
-        elizaLogger.log(
-          `Populated ${tweetsToSave.length} missing tweets from the cache.`
-        );
-        return;
-      }
-    }
-
-    const timeline = await this.fetchHomeTimeline(cachedTimeline ? 10 : 50);
-    const username = this.twitterConfig.TWITTER_USERNAME;
-
-    // Get the most recent 20 mentions and interactions
-    const mentionsAndInteractions = await this.fetchSearchTweets(
-      `@${username}`,
-      20,
-      SearchMode.Latest
-    );
-
-    // Combine the timeline tweets and mentions/interactions
-    const allTweets = [...timeline, ...mentionsAndInteractions.tweets];
-
-    // Create a Set to store unique tweet IDs
-    const tweetIdsToCheck = new Set<string>();
-    const roomIds = new Set<UUID>();
-
-    // Add tweet IDs to the Set
-    for (const tweet of allTweets) {
-      tweetIdsToCheck.add(tweet.id);
-      roomIds.add(
-        stringToUuid(tweet.conversationId + "-" + this.runtime.agentId)
-      );
-    }
-
-    // Check the existing memories in the database
-    const existingMemories =
-      await this.runtime.messageManager.getMemoriesByRoomIds({
-        roomIds: Array.from(roomIds),
-      });
-
-    // Create a Set to store the existing memory IDs
-    const existingMemoryIds = new Set<UUID>(
-      existingMemories.map((memory) => memory.id)
-    );
-
-    // Filter out the tweets that already exist in the database
-    const tweetsToSave = allTweets.filter(
-      (tweet) =>
-        !existingMemoryIds.has(
-          stringToUuid(tweet.id + "-" + this.runtime.agentId)
-        )
-    );
-
-    elizaLogger.debug({
-      processingTweets: tweetsToSave.map((tweet) => tweet.id).join(","),
-    });
-
-    await this.runtime.ensureUserExists(
-      this.runtime.agentId,
-      this.profile.username,
-      this.runtime.character.name,
-      "twitter"
-    );
-
-    // Save the new tweets as memories
-    for (const tweet of tweetsToSave) {
-      elizaLogger.log("Saving Tweet", tweet.id);
-
-      const roomId = stringToUuid(
-        tweet.conversationId + "-" + this.runtime.agentId
-      );
-      const userId =
-        tweet.userId === this.profile.id
-          ? this.runtime.agentId
-          : stringToUuid(tweet.userId);
-
-      if (tweet.userId === this.profile.id) {
-        await this.runtime.ensureConnection(
-          this.runtime.agentId,
-          roomId,
-          this.profile.username,
-          this.profile.screenName,
-          "twitter"
-        );
-      } else {
-        await this.runtime.ensureConnection(
-          userId,
-          roomId,
-          tweet.username,
-          tweet.name,
-          "twitter"
-        );
-      }
-
-      const content = {
-        text: tweet.text,
-        url: tweet.permanentUrl,
-        source: "twitter",
-        inReplyTo: tweet.inReplyToStatusId
-          ? stringToUuid(tweet.inReplyToStatusId)
-          : undefined,
-      } as Content;
-
-      await this.runtime.messageManager.createMemory({
-        id: stringToUuid(tweet.id + "-" + this.runtime.agentId),
-        userId,
-        content: content,
-        agentId: this.runtime.agentId,
-        roomId,
-        embedding: getEmbeddingZeroVector(),
-        createdAt: tweet.timestamp * 1000,
-      });
-
-      await this.cacheTweet(tweet);
-    }
-
-    // Cache
-    await this.cacheTimeline(timeline);
-    await this.cacheMentions(mentionsAndInteractions.tweets);
-  }
-
   async setCookiesFromArray(cookiesArray: any[]) {
     const cookieStrings = cookiesArray.map(
       (cookie) =>
@@ -715,23 +379,19 @@ export class ClientBase extends EventEmitter {
 
   async fetchProfile(username: string): Promise<TwitterProfile> {
     try {
-      const profile = await this.requestQueue.add(async () => {
-        const profile = await this.twitterClient.getProfile(username);
-        return {
-          id: profile.userId,
-          username,
-          screenName: profile.name || this.runtime.character.name,
-          bio:
-            profile.biography || typeof this.runtime.character.bio === "string"
-              ? (this.runtime.character.bio as string)
-              : this.runtime.character.bio.length > 0
-              ? this.runtime.character.bio[0]
-              : "",
-          nicknames: this.runtime.character.twitterProfile?.nicknames || [],
-        } satisfies TwitterProfile;
-      });
-
-      return profile;
+      const profile = await this.twitterClient.getProfile(username);
+      return {
+        id: profile.userId,
+        username,
+        screenName: profile.name || this.runtime.character.name,
+        bio:
+          profile.biography || typeof this.runtime.character.bio === "string"
+            ? (this.runtime.character.bio as string)
+            : this.runtime.character.bio.length > 0
+            ? this.runtime.character.bio[0]
+            : "",
+        nicknames: this.runtime.character.twitterProfile?.nicknames || [],
+      } satisfies TwitterProfile;
     } catch (error) {
       console.error("Error fetching Twitter profile:", error);
       throw error;

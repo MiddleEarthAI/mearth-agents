@@ -9,7 +9,7 @@ import {
   UUID,
 } from "@elizaos/core";
 import { elizaLogger } from "@elizaos/core";
-import { ClientBase } from "./base.ts";
+import { TwitterClientBase } from "./twitterBase.ts";
 import { postActionResponseFooter } from "@elizaos/core";
 import { generateTweetActions } from "@elizaos/core";
 import { IImageDescriptionService, ServiceType } from "@elizaos/core";
@@ -70,19 +70,8 @@ Tweet:
 # Respond with qualifying action tags only. Default to NO action unless extremely confident of relevance.` +
   postActionResponseFooter;
 
-interface PendingTweet {
-  cleanedContent: string;
-  roomId: UUID;
-  newTweetContent: string;
-  discordMessageId: string;
-  channelId: string;
-  timestamp: number;
-}
-
-type PendingTweetApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
-
 export class TwitterPostClient {
-  client: ClientBase;
+  client: TwitterClientBase;
   runtime: IAgentRuntime;
   twitterUsername: string;
   private isProcessing: boolean = false;
@@ -90,7 +79,7 @@ export class TwitterPostClient {
   private stopProcessingActions: boolean = false;
   private isDryRun: boolean;
 
-  constructor(client: ClientBase, runtime: IAgentRuntime) {
+  constructor(client: TwitterClientBase, runtime: IAgentRuntime) {
     this.client = client;
     this.runtime = runtime;
     this.twitterUsername = this.client.twitterConfig.TWITTER_USERNAME as string;
@@ -138,72 +127,6 @@ export class TwitterPostClient {
     }
   }
 
-  async start() {
-    if (!this.client.profile) {
-      await this.client.init();
-    }
-
-    const generateNewTweetLoop = async () => {
-      const lastPost = await this.runtime.cacheManager.get<{
-        timestamp: number;
-      }>("twitter/" + this.twitterUsername + "/lastPost");
-
-      const lastPostTimestamp = lastPost?.timestamp ?? 0;
-      const minMinutes = Number(this.client.twitterConfig.POST_INTERVAL_MIN);
-      const maxMinutes = Number(this.client.twitterConfig.POST_INTERVAL_MAX);
-      const delay =
-        Math.floor(Math.random() * (maxMinutes - minMinutes + 1)) + minMinutes;
-
-      if (Date.now() > lastPostTimestamp + delay) {
-        await this.generateNewTweet();
-      }
-
-      setTimeout(() => {
-        generateNewTweetLoop(); // Set up next iteration
-      }, delay);
-
-      elizaLogger.log(`Next tweet scheduled in ${delay} minutes`);
-    };
-
-    const processActionsLoop = async () => {
-      const actionInterval = Number(this.client.twitterConfig.ACTION_INTERVAL); // Defaults to 5 minutes
-
-      while (!this.stopProcessingActions) {
-        try {
-          const results = await this.processTweetActions();
-          if (results) {
-            elizaLogger.log(`Processed ${results.length} tweets`);
-            elizaLogger.log(
-              `Next action processing scheduled in ${actionInterval} minutes`
-            );
-            // Wait for the full interval before next processing
-            await new Promise(
-              (resolve) => setTimeout(resolve, actionInterval * 60 * 1000) // now in minutes
-            );
-          }
-        } catch (error) {
-          elizaLogger.error("Error in action processing loop:", error);
-          // Add exponential backoff on error
-          await new Promise((resolve) => setTimeout(resolve, 30000)); // Wait 30s on error
-        }
-      }
-    };
-
-    if (this.client.twitterConfig.POST_IMMEDIATELY) {
-      await this.generateNewTweet();
-    }
-
-    // Only start tweet generation loop if not in dry run mode
-    generateNewTweetLoop();
-    elizaLogger.log("Tweet generation loop started");
-
-    if (this.client.twitterConfig.ENABLE_ACTION_PROCESSING) {
-      processActionsLoop().catch((error) => {
-        elizaLogger.error("Fatal error in process actions loop:", error);
-      });
-    }
-  }
-
   createTweetObject(
     tweetResult: any,
     client: any,
@@ -231,7 +154,7 @@ export class TwitterPostClient {
 
   async processAndCacheTweet(
     runtime: IAgentRuntime,
-    client: ClientBase,
+    client: TwitterClientBase,
     tweet: Tweet,
     roomId: UUID,
     newTweetContent: string
@@ -271,10 +194,15 @@ export class TwitterPostClient {
     });
   }
 
-  async handleNoteTweet(client: ClientBase, content: string, tweetId?: string) {
+  async handleNoteTweet(
+    client: TwitterClientBase,
+    content: string,
+    tweetId?: string
+  ) {
     try {
-      const noteTweetResult = await client.requestQueue.add(
-        async () => await client.twitterClient.sendNoteTweet(content, tweetId)
+      const noteTweetResult = await client.twitterClient.sendNoteTweet(
+        content,
+        tweetId
       );
 
       if (noteTweetResult.errors && noteTweetResult.errors.length > 0) {
@@ -293,14 +221,16 @@ export class TwitterPostClient {
   }
 
   async sendStandardTweet(
-    client: ClientBase,
+    client: TwitterClientBase,
     content: string,
     tweetId?: string
   ) {
     try {
-      const standardTweetResult = await client.requestQueue.add(
-        async () => await client.twitterClient.sendTweet(content, tweetId)
+      const standardTweetResult = await client.twitterClient.sendTweet(
+        content,
+        tweetId
       );
+
       const body = await standardTweetResult.json();
       if (!body?.data?.create_tweet?.tweet_results?.result) {
         console.error("Error sending tweet; Bad response:", body);
@@ -315,7 +245,7 @@ export class TwitterPostClient {
 
   async postTweet(
     runtime: IAgentRuntime,
-    client: ClientBase,
+    client: TwitterClientBase,
     cleanedContent: string,
     roomId: UUID,
     newTweetContent: string,
@@ -517,7 +447,6 @@ export class TwitterPostClient {
     // If not JSON or no valid content found, clean the raw text
     return this.trimTweetLength(cleanedResponse);
   }
-
   // Helper method to ensure tweet length compliance
   private trimTweetLength(text: string, maxLength: number = 280): string {
     if (text.length <= maxLength) return text;
@@ -809,12 +738,9 @@ export class TwitterPostClient {
               executedActions.push("quote (dry run)");
             } else {
               // Send the tweet through request queue
-              const result = await this.client.requestQueue.add(
-                async () =>
-                  await this.client.twitterClient.sendQuoteTweet(
-                    quoteContent,
-                    tweet.id
-                  )
+              const result = await this.client.twitterClient.sendQuoteTweet(
+                quoteContent,
+                tweet.id
               );
 
               const body = await result.json();

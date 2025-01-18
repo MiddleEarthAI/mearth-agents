@@ -17,7 +17,7 @@ import {
   IImageDescriptionService,
   ServiceType,
 } from "@elizaos/core";
-import { ClientBase } from "./base";
+import { TwitterClientBase } from "./twitterBase";
 import { buildConversationThread, sendTweet, wait } from "./utils";
 
 export const twitterMessageHandlerTemplate =
@@ -94,10 +94,10 @@ Thread of Tweets You Are Replying To:
 ` + shouldRespondFooter;
 
 export class TwitterInteractionClient {
-  client: ClientBase;
+  client: TwitterClientBase;
   runtime: IAgentRuntime;
   private isDryRun: boolean;
-  constructor(client: ClientBase, runtime: IAgentRuntime) {
+  constructor(client: TwitterClientBase, runtime: IAgentRuntime) {
     this.client = client;
     this.runtime = runtime;
     this.isDryRun = this.client.twitterConfig.TWITTER_DRY_RUN;
@@ -121,19 +121,20 @@ export class TwitterInteractionClient {
     const twitterUsername = this.client.profile.username;
     try {
       // Check for mentions
-      const mentionCandidates = (
-        await this.client.fetchSearchTweets(
-          `@${twitterUsername}`,
-          20,
-          SearchMode.Latest
-        )
-      ).tweets;
+      // const mentionCandidates = (
+      //   await this.client.fetchSearchTweets(
+      //     `@${twitterUsername}`,
+      //     20,
+      //     SearchMode.Latest
+      //   )
+      // ).tweets;
 
       elizaLogger.log(
-        "Completed checking mentioned tweets:",
-        mentionCandidates.length
+        "Completed checking mentioned tweets:"
+        // mentionCandidates.length
       );
-      let uniqueTweetCandidates = [...mentionCandidates];
+      // let uniqueTweetCandidates = [...mentionCandidates];
+      let uniqueTweetCandidates = [];
       // Only process target users if configured
       if (this.client.twitterConfig.TWITTER_TARGET_USERS.length) {
         const TARGET_USERS = this.client.twitterConfig.TWITTER_TARGET_USERS;
@@ -211,7 +212,7 @@ export class TwitterInteractionClient {
           }
 
           // Add selected tweets to candidates
-          uniqueTweetCandidates = [...mentionCandidates, ...selectedTweets];
+          uniqueTweetCandidates = [...selectedTweets];
         }
       } else {
         elizaLogger.log("No target users configured, processing only mentions");

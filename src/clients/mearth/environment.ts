@@ -1,5 +1,6 @@
 import { parseBooleanFromText, IAgentRuntime } from "@elizaos/core";
 import { z, ZodError } from "zod";
+import { MearthConfig } from "./types";
 enum ActionTimelineType {
   Following = "Following",
   ForYou = "ForYou",
@@ -229,4 +230,22 @@ export async function validateTwitterConfig(
     }
     throw error;
   }
+}
+
+export async function validateMearthConfig(
+  runtime: IAgentRuntime
+): Promise<MearthConfig> {
+  return {
+    SOLANA_RPC_URL: "https://api.devnet.solana.com",
+    SOLANA_WALLET_ADDRESS: "7Le482fsTXfSHbZtuDTGhUNcaFuYvHEFuNR5YKMPMbsP",
+  };
+  //   z.object({
+  //     SOLANA_WALLET_ADDRESS: z
+  //       .string()
+  //       .min(1, "SOLANA_WALLET_ADDRESS is required"),
+  //   }).parse({
+  //     SOLANA_WALLET_ADDRESS:
+  //       runtime.getSetting("SOLANA_WALLET_ADDRESS") ||
+  //       process.env.SOLANA_WALLET_ADDRESS,
+  //   });
 }
