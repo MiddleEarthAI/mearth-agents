@@ -388,6 +388,6 @@ export class TwitterClient extends EventEmitter {
   }
 
   async postTweet(text: string) {
-    await this.postTweet(text);
+    await this.twitterClient.sendTweet(text);
   }
 }

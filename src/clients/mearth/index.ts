@@ -9,7 +9,7 @@ import {
   State,
   stringToUuid,
 } from "@elizaos/core";
-import { TwitterClient } from "./twitterBase";
+import { TwitterClient } from "./twitter";
 import { validateTwitterConfig, TwitterConfig } from "./environment";
 import { mearthNewPositionTemplate } from "../../templates";
 import { parseMearthActionFromText } from "../../utils/parsing";
@@ -36,10 +36,6 @@ class MearthClient {
       await this.twitterClient.init();
     }
     this.isRunning = true;
-    this.runMearthLoop();
-  }
-
-  private async runMearthLoop() {
     while (this.isRunning) {
       try {
         await this.processSingleIteration();
@@ -50,7 +46,6 @@ class MearthClient {
       }
     }
   }
-
   private async processSingleIteration() {
     const roomId = stringToUuid(
       `twitter_generate_room-${this.twitterClient.profile.username}`
@@ -98,6 +93,7 @@ class MearthClient {
         if (error) {
           elizaLogger.error("Error processing actions:", error);
         }
+        this.postUpdate(content.text);
         return [];
       };
 
@@ -113,7 +109,7 @@ class MearthClient {
   }
 
   private postUpdate = async (action?: string) => {
-    this.twitterClient.postTweet("hello world");
+    this.twitterClient.postTweet(action);
   };
 
   private generateAgentAction = async ({
@@ -163,6 +159,7 @@ class MearthClient {
 
 export const MearthClientInterface: Client = {
   start: async (runtime: IAgentRuntime) => {
+    elizaLogger.log("I was called 🔥🔥 ✅✅✅");
     const twitterConfig: TwitterConfig = await validateTwitterConfig(runtime);
     const client = new MearthClient(runtime, twitterConfig);
     await client.twitterClient.init();

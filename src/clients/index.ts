@@ -1,4 +1,3 @@
-import { AutoClientInterface } from "@elizaos/client-auto";
 import { TelegramClientInterface } from "@elizaos/client-telegram";
 import { Character, IAgentRuntime } from "@elizaos/core";
 import MearthClientInterface from "./mearth";
@@ -14,14 +13,10 @@ export async function initializeClients(
     const mearthClient = await MearthClientInterface.start(runtime);
     if (mearthClient) clients.push(mearthClient);
   }
+
   if (clientTypes.includes("telegram")) {
     const telegramClient = await TelegramClientInterface.start(runtime);
     if (telegramClient) clients.push(telegramClient);
-  }
-
-  if (clientTypes.includes("auto")) {
-    const autoClient = await AutoClientInterface.start(runtime);
-    if (autoClient) clients.push(autoClient);
   }
 
   if (character.plugins?.length > 0) {
